@@ -1,0 +1,1989 @@
+<title>Miguel 5250</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: bancada de laboratório — palco 3D grande à esquerda, terminal serial e programa à direita, painel de jog com leituras de encoder abaixo do palco. */
+:root {
+  --bg: #e7ebe9;
+  --panel: #f6f8f7;
+  --ink: #1c2427;
+  --muted: #59666a;
+  --line: #ccd3d1;
+  --accent: #d38c0b;
+  --accent-ink: #1d1606;
+  --steel: #2c5d78;
+  --stop: #c23a2b;
+  --stop-ink: #ffffff;
+  --ok: #2b7a4c;
+  --stage: #dce2e0;
+  --floor: #c6cecb;
+  --grid: #a7b1ae;
+  --key: #ffffff;
+  --term-bg: #0b0e0f;
+  --term-ink: #c6d2ce;
+  --term-dim: #6f7d79;
+  --jv: #1f7fa8;
+  --jv-glow: rgba(31,127,168,.35);
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --jv: #5cc4ef; --jv-glow: rgba(92,196,239,.35);
+    --bg: #111517; --panel: #192023; --ink: #dae1df; --muted: #8e999c; --line: #2b3337;
+    --accent: #efab2c; --accent-ink: #1d1606; --steel: #80b3d0; --stop: #df5845; --stop-ink: #ffffff;
+    --ok: #5cc28a; --stage: #1a2023; --floor: #252c2f; --grid: #3a4448; --key: #222a2e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --jv: #5cc4ef; --jv-glow: rgba(92,196,239,.35);
+  --bg: #111517; --panel: #192023; --ink: #dae1df; --muted: #8e999c; --line: #2b3337;
+  --accent: #efab2c; --accent-ink: #1d1606; --steel: #80b3d0; --stop: #df5845; --stop-ink: #ffffff;
+  --ok: #5cc28a; --stage: #1a2023; --floor: #252c2f; --grid: #3a4448; --key: #222a2e;
+  color-scheme: dark;
+}
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: var(--body); font-size: 15px; line-height: 1.45; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+
+.app {
+  max-width: 1440px; margin: 0 auto;
+  padding-inline: 16px; padding-block: 16px 40px;
+  display: grid; gap: 16px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  grid-template-areas: "head head" "real real" "stage side" "pad side" ". side";
+  grid-template-rows: auto auto auto auto 1fr;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "real" "stage" "pad" "side"; grid-template-rows: none; }
+}
+
+/* Cabeçalho */
+.head { grid-area: head; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
+.eyebrow { font-family: var(--display); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 4vw, 40px); line-height: 1; margin: 2px 0 0; letter-spacing: .01em; text-wrap: balance; }
+.head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 7px 12px; cursor: pointer; font-weight: 500; font-size: 14px; }
+.btn:hover { border-color: var(--muted); }
+.btn:focus-visible, .jog:focus-visible, .act:focus-visible, textarea:focus-visible, pre:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn.stopbtn { background: var(--stop); border-color: var(--stop); color: var(--stop-ink); font-weight: 600; }
+.realpanel { grid-area: real; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.realpanel label { font-family: var(--display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 13px; color: var(--muted); }
+.realpanel select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); min-width: 0; max-width: 100%; }
+.realpanel p { margin: 0; flex-basis: 100%; font-size: 13.5px; color: var(--muted); max-width: 75ch; }
+.realpanel p.err { color: var(--stop); }
+
+/* Palco 3D */
+.stage { grid-area: stage; position: relative; aspect-ratio: 16 / 10; max-width: 100%; border-radius: 8px; overflow: hidden; background: var(--stage); border: 1px solid var(--line); min-height: 280px; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.chips { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+.chip { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; background: var(--panel); border: 1px solid var(--line); padding: 3px 8px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.chip.src { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip.src.real { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.chip.state { text-transform: none; letter-spacing: .02em; font-family: var(--mono); font-weight: 500; font-size: 12px; }
+.warn { position: absolute; top: 44px; left: 10px; background: var(--stop); color: var(--stop-ink); font-family: var(--display); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; font-size: 14px; pointer-events: none; }
+.task { position: absolute; left: 10px; bottom: 10px; right: 10px; max-width: 440px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13.5px; pointer-events: none; }
+.task b { font-family: var(--display); letter-spacing: .06em; text-transform: uppercase; font-size: 13px; margin-right: 6px; }
+.task .done { color: var(--ok); font-weight: 600; }
+.hint { position: absolute; right: 10px; bottom: 10px; font-size: 12px; color: var(--muted); pointer-events: none; }
+@media (max-width: 640px) { .hint { display: none; } }
+
+/* Painel de jog */
+.pad { grid-area: pad; display: grid; gap: 12px; }
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+table.axes { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 520px; }
+.axes th { font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; font-size: 12.5px; color: var(--muted); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.axes td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.axes tr:last-child td { border-bottom: 0; }
+.axes td.name { font-weight: 600; white-space: nowrap; }
+.axes td.name small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+.axes td.num { font-family: var(--mono); font-size: 13.5px; text-align: right; white-space: nowrap; }
+.axes th.r { text-align: right; }
+.keys { display: flex; gap: 6px; }
+.jog { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-bottom-width: 3px; background: var(--key); border-radius: 6px; padding: 4px 9px 3px; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; font-size: 13px; white-space: nowrap; }
+.jog kbd { font-family: var(--mono); font-weight: 500; font-size: 13px; }
+.jog.on, .jog:active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); transform: translateY(1px); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--muted); vertical-align: middle; }
+.sw.hit { background: var(--accent); border-color: var(--accent); }
+.na { color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.act { display: grid; justify-items: start; gap: 0; border: 1px solid var(--line); border-bottom-width: 3px; background: var(--panel); border-radius: 6px; padding: 5px 11px 4px; cursor: pointer; min-width: 74px; }
+.act span { font-weight: 600; font-size: 14px; line-height: 1.2; }
+.act kbd { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.act.stop { background: var(--stop); border-color: var(--stop); color: var(--stop-ink); min-width: 130px; }
+.act.stop kbd { color: var(--stop-ink); opacity: .85; }
+.act:active { transform: translateY(1px); }
+
+/* Lateral: terminal e programa */
+.side { grid-area: side; display: grid; gap: 16px; min-width: 0; }
+.term { border-radius: 8px; overflow: hidden; border: 1px solid #000; background: var(--term-bg); }
+.term-bar { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 10px; background: #1b2124; color: #9fb0ab; font-family: var(--mono); font-size: 12px; }
+.term-bar #echo { color: #f0b43a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#term { margin: 0; height: 340px; overflow: auto; padding: 10px 12px; color: var(--term-ink); background: var(--term-bg); font-family: var(--mono); font-size: 12.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.term-foot { padding: 6px 10px; color: var(--term-dim); font-size: 12px; border-top: 1px solid #1f2629; background: var(--term-bg); }
+.prog { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .02em; margin: 0; }
+.prog p { margin: 0; color: var(--muted); font-size: 13.5px; max-width: 65ch; }
+textarea#prog { width: 100%; min-height: 260px; resize: vertical; font-family: var(--mono); font-size: 13px; line-height: 1.45; padding: 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Painel Miguel */
+.jarvis { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 12px; min-width: 0; }
+.jv-top { display: flex; align-items: center; gap: 16px; }
+.jv-mic { position: relative; flex: none; width: 84px; height: 84px; border-radius: 50%; border: 2px solid var(--jv); background: var(--bg); color: var(--jv); cursor: pointer; display: grid; place-items: center; }
+.jv-mic svg { width: 34px; height: 34px; }
+.jv-mic[aria-pressed="true"] { background: var(--jv); color: var(--bg); box-shadow: 0 0 0 6px var(--jv-glow); }
+.jv-mic[aria-pressed="true"]::after { content: ""; position: absolute; inset: -10px; border-radius: 50%; border: 2px solid var(--jv); animation: jvpulso 1.6s ease-out infinite; }
+@keyframes jvpulso { from { transform: scale(.9); opacity: .9 } to { transform: scale(1.35); opacity: 0 } }
+@media (prefers-reduced-motion: reduce) { .jv-mic[aria-pressed="true"]::after { animation: none; } }
+.jv-mic:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.jv-txt { min-width: 0; display: grid; gap: 4px; }
+.jv-estado { font-family: var(--display); font-weight: 600; letter-spacing: .07em; text-transform: uppercase; font-size: 13px; color: var(--jv); }
+.jv-ouvido { margin: 0; font-size: 15px; color: var(--muted); font-style: italic; overflow-wrap: anywhere; }
+.jv-resp { margin: 0; font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
+.jv-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.jv-row input[type=text] { flex: 1 1 200px; min-width: 0; font: inherit; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.jv-opt { display: flex; gap: 6px; align-items: center; font-size: 13.5px; color: var(--muted); }
+.jv-aviso { margin: 0; font-size: 13px; color: var(--muted); max-width: 70ch; }
+.jv-poses { display: flex; flex-wrap: wrap; gap: 6px; }
+.jv-pose { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); }
+details.jv-help summary { cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 15px; }
+details.jv-help ul { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 3px; }
+details.jv-help code { font-family: var(--mono); font-size: 12.5px; }
+details.about { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+details.about summary { cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 16px; letter-spacing: .03em; }
+details.about ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; color: var(--muted); max-width: 65ch; }
+details.about code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .jog, .act { transition: none; } }
+</style>
+
+<div class="app">
+  <header class="head">
+    <div>
+      <div class="eyebrow">Lab-Volt 5250 · controle por voz · demonstração</div>
+      <h1>Miguel 5250</h1>
+    </div>
+    <div class="head-actions">
+      <button class="btn" type="button" id="btnReset" title="Desliga e liga o Arduino: os encoders voltam a zero onde o braço estiver e o zeramento roda de novo">Reiniciar Arduino</button>
+      <button class="btn" type="button" id="btnCubo">Repor peça</button>
+      <button class="btn" type="button" id="btnReal">Conectar braço real</button>
+    </div>
+  </header>
+
+  <section class="realpanel" id="realPanel" hidden aria-label="Conexão com o braço real">
+    <label for="selPorta">Porta</label>
+    <select id="selPorta"><option value="">procurando…</option></select>
+    <button class="btn" type="button" id="btnPortas">Atualizar lista</button>
+    <button class="btn primary" type="button" id="btnConectar">Conectar</button>
+    <button class="btn" type="button" id="btnPermissoes">Permissões da ponte</button>
+    <button class="btn" type="button" id="btnFecharPainel">Cancelar</button>
+    <p id="realMsg">Feche o PuTTY antes de conectar. Ao abrir a porta, o Arduino reinicia e faz o zeramento.</p>
+  </section>
+
+  <section class="stage" id="stage" aria-label="Modelo 3D do braço">
+    <canvas id="cv"></canvas>
+    <div class="chips">
+      <span class="chip src" id="chipFonte">Simulador</span>
+      <span class="chip" id="chipModo">Modo segurar</span>
+      <span class="chip" id="chipVel">Vel 100%</span>
+      <span class="chip state" id="chipEstado">Ligando…</span>
+    </div>
+    <div class="warn" id="warn" hidden>Colisão com a mesa</div>
+    <div class="task"><b>Tarefa</b>Pegue o bloco na esteira e coloque no alvo listrado. <span id="taskStatus"></span></div>
+    <div class="hint">Arraste para girar a vista · role para aproximar</div>
+  </section>
+
+  <section class="pad" aria-label="Controle manual">
+    <div class="table-wrap">
+      <table class="axes">
+        <thead><tr><th>Eixo</th><th>Teclas</th><th class="r">Encoder</th><th class="r">Posição</th><th>Fim de curso</th></tr></thead>
+        <tbody id="axesBody"></tbody>
+      </table>
+    </div>
+    <div class="actions" id="actions"></div>
+  </section>
+
+  <aside class="side">
+    <section class="jarvis" aria-label="Controle por voz">
+      <div class="jv-top">
+        <button class="jv-mic" type="button" id="jvMic" aria-pressed="false" aria-label="Ligar o microfone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
+        <div class="jv-txt">
+          <span class="jv-estado" id="jvEstado">Pronto</span>
+          <p class="jv-ouvido" id="jvOuvido">Diga: "Miguel, abra a garra"</p>
+          <p class="jv-resp" id="jvResp">Às suas ordens.</p>
+        </div>
+      </div>
+      <form class="jv-row" id="jvForm" autocomplete="off">
+        <input type="text" id="jvTexto" placeholder="ou digite: girar a base 30 graus para a esquerda" aria-label="Comando por texto">
+        <button class="btn primary" type="submit">Executar</button>
+        <button class="btn" type="button" id="jvParar">Parar</button>
+      </form>
+      <div class="jv-row">
+        <label class="jv-opt"><input type="checkbox" id="jvWake" checked> Só obedecer quando ouvir "Miguel"</label>
+        <label class="jv-opt"><input type="checkbox" id="jvFala" checked> Responder em voz alta</label>
+        <label class="jv-opt"><input type="checkbox" id="jvIA" checked> Entender frases livres (Claude)</label>
+      </div>
+      <div class="jv-poses" id="jvPoses" aria-label="Posições gravadas"></div>
+      <p class="jv-aviso" id="jvAviso"></p>
+      <details class="jv-help">
+        <summary>O que o Miguel entende</summary>
+        <ul>
+          <li><code>abra / feche a garra</code></li>
+          <li><code>gire a base 45 graus para a esquerda</code> (esquerda = anti-horário)</li>
+          <li><code>ombro para frente 20 graus</code>, <code>ombro para trás</code></li>
+          <li><code>suba / desça o cotovelo</code>, <code>suba / desça o punho</code>, <code>gire o punho</code></li>
+          <li><code>velocidade lenta / normal / rápida</code></li>
+          <li><code>grave a posição peça</code>, <code>vá para a posição peça</code>, <code>apague a posição peça</code></li>
+          <li><code>pegue a peça</code> (usa as posições acima peça, peça, acima destino e destino)</li>
+          <li><code>bom dia</code> / <code>boa tarde</code>, <code>acene</code>, <code>posição inicial</code>, <code>onde você está</code>, <code>pare</code></li>
+        </ul>
+      </details>
+    </section>
+
+    <div class="term">
+      <div class="term-bar"><span>Serial · 9600 baud</span><span id="echo"></span></div>
+      <pre id="term" tabindex="0" aria-live="off"></pre>
+      <div class="term-foot">O teclado do PC vai direto para a serial, como no PuTTY. Segure a tecla para o eixo andar.</div>
+    </div>
+
+    <div class="prog">
+      <h2>Programa</h2>
+      <p>Mesmo texto que você cola no PuTTY. Leve o braço até um ponto, clique em <b>Inserir ponto atual</b> e repita. <b>Enviar ao braço</b> cola o texto na serial.</p>
+      <textarea id="prog" spellcheck="false" aria-label="Texto do programa"></textarea>
+      <div class="row">
+        <button class="btn primary" type="button" id="btnEnviar">Enviar ao braço</button>
+        <button class="btn" type="button" id="btnExecutar" title="Executa o programa gravado no Arduino, repetindo o número de vezes da linha #EXECUTAR do quadro">▶ Executar</button>
+        <button class="btn stopbtn" type="button" id="btnPararProg" title="Para tudo (mesmo que a tecla ESPAÇO)">■ Parar</button>
+        <button class="btn" type="button" id="btnPonto">Inserir ponto atual</button>
+        <button class="btn" type="button" id="btnCopiar">Copiar para o PuTTY</button>
+        <button class="btn" type="button" id="btnLimpar" title="Apaga o texto do quadro e começa um programa novo">Limpar programa</button>
+      </div>
+    </div>
+
+    <details class="about">
+      <summary>Sobre o modelo</summary>
+      <ul>
+        <li>O simulador roda uma cópia do <code>BracoTeclado.ino</code> em JavaScript: mesmas teclas, mesmos comandos <code>#</code>, mesmos limites de encoder e as mesmas compensações entre motores.</li>
+        <li>Ao ligar, os encoders começam em zero onde o braço estiver, por isso o zeramento roda primeiro. A garra não tem fim de curso: abra com <code>H</code> e aperte <code>X</code> antes de rodar programas.</li>
+        <li>O punho é diferencial: mover o punho ou o cotovelo também gira os motores MP e GP, então as contagens desses eixos mudam juntas. Por isso a ordem das linhas no programa importa.</li>
+        <li>Ângulos, medidas e velocidades são aproximados. Para calibrar, meça contagens por grau no braço real e ajuste o objeto <code>CFG</code> no início do script.</li>
+        <li>Braço real pelo app do Claude: com a ponte serial instalada no PC da bancada, abra esta página no app do Claude para desktop e clique em <code>Conectar braço real</code>. Sem a ponte, abra o arquivo .html no Chrome ou Edge. Ligue o monitor (<code>V</code>) para o modelo 3D acompanhar as posições.</li>
+      </ul>
+    </details>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+// =====================================================================================
+//  CALIBRACAO DO MODELO (aproximada) - ajuste medindo o braco real
+// =====================================================================================
+const CFG = {
+  // contagens de encoder por segundo para cada unidade de PWM
+  K:    { LT: 35, B: 44, O: 12.86, C: 27.8, MP: 13.35, GP: 24.4, G: 65 },
+  // sentido: +1 se PWM positivo AUMENTA a contagem do encoder (deduzido do firmware)
+  SIGN: { LT: -1, B: -1, O: 1, C: 1, MP: 1, GP: 1, G: 1 },
+  DEAD: 12,                                       // PWM minimo para o motor vencer o atrito
+  // Pose de zero (fotos da bancada, 13/10): ombro 45 graus para tras, antebraco na
+  // horizontal apontando para frente, garra aberta apontando para cima e para frente
+  // (~50 graus da vertical). Angulos relativos ao elo anterior.
+  QMIN: { O: -45, C: 135, MP: -40, GP: -180 },    // angulo (graus) na chave fim de curso
+  // graus por contagem; negativo = a junta gira no sentido contrario ao aumentar o encoder
+  DPC:  { O: 165 / 18000, C: -155 / 20010, MP: 180 / 10680, GP: 360 / 23410 },
+  PREF: { O: 0, C: 0, MP: 0, GP: 0 },             // contagem na chave fim de curso (15/10: todos comecam em 0)
+  // base no zero: braco apontando para o lado oposto a esteira, perpendicular ao trilho
+  B:  { pMin: 0, pMax: 53000, qMin: -180, qMax: 120 },
+  LT: { pLen: 80000, xStart: 0.05, xLen: 0.85 },  // trilho de 0,85 m
+  G:  { pClosed: 26095, maxOpen: 0.07 },          // abertura maxima 70 mm
+  DIM: { shoulderY: 0.23, shoulderZ: 0.04, upper: 0.35, fore: 0.23, wrist: 0.05 },  // medido com trena em 13/10: ombro-cotovelo 35 cm, cotovelo-punho 23 cm
+};
+
+// =====================================================================================
+//  ESTADO FISICO (o que o "hardware" esta fazendo)
+// =====================================================================================
+const AXES = ["LT", "B", "O", "C", "MP", "GP", "G"];
+const ARM = ["O", "C", "MP", "GP"];
+const pwm = { LT: 0, B: 0, O: 0, C: 0, MP: 0, GP: 0, G: 0 };
+const phys = {};   // posicao fisica de cada motor, em contagens
+const off = {};    // encoder = phys - off (zerado ao ligar e no homing)
+let simMs = 0;
+let realMode = false;
+
+const MOVIMENTOS = [
+  ["Nenhum",                 0,    0,    0,   0,   0,   0,   0],
+  ["Base recuar",           0,  -80,    0,   0,   0,   0,   0],
+  ["Base avancar",            0,   80,    0,   0,   0,   0,   0],
+  ["Ombro recuar",           0,    0, -150,  90, -80,  80,   0],   // [15/10] nomes conforme o movimento real
+  ["Ombro avancar",          0,    0,  150, -90,  80, -80,   0],
+  ["Cotovelo recuar",        0,    0,    0, -80, 100, -90,   0],
+  ["Cotovelo avancar",       0,    0,    0,  80, -50,  50,   0],
+  ["Mov. punho recuar",      0,    0,    0,   0, -80,  80,   0],
+  ["Mov. punho avancar",     0,    0,    0,   0,  80, -80,   0],
+  ["Giro punho recuar",     0,    0,    0,   0, -90, -80,   0],
+  ["Giro punho avancar",      0,    0,    0,   0,  90,  80,   0],
+  ["Garra abrir",            0,    0,    0,   0,   0,   0, -80],   // [15/10] fechar = PWM positivo
+  ["Garra fechar",           0,    0,    0,   0,   0,   0,  80],
+  ["Linha transv. esquerda", 230,  0,    0,   0,   0,   0,   0],
+  ["Linha transv. direita", -230,  0,    0,   0,   0,   0,   0],
+].map(r => ({ nome: r[0], LT: r[1], B: r[2], O: r[3], C: r[4], MP: r[5], GP: r[6], G: r[7] }));
+
+const MV = { NENHUM: 0, B_AVANCAR: 1, B_RECUAR: 2, O_AVANCAR: 3, O_RECUAR: 4, C_AVANCAR: 5, C_RECUAR: 6,
+  MP_AVANCAR: 7, MP_RECUAR: 8, GP_AVANCAR: 9, GP_RECUAR: 10, G_ABRIR: 11, G_FECHAR: 12,
+  LT_ESQUERDA: 13, LT_DIREITA: 14, TOTAL: 15 };
+
+// ---- cinematica acoplada: cada movimento compensado do firmware gira so a sua junta ----
+function inv(A) {
+  const n = A.length;
+  const M = A.map((r, i) => [...r, ...Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))]);
+  for (let c = 0; c < n; c++) {
+    let piv = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[piv][c])) piv = r;
+    [M[c], M[piv]] = [M[piv], M[c]];
+    const d = M[c][c];
+    for (let j = 0; j < 2 * n; j++) M[c][j] /= d;
+    for (let r = 0; r < n; r++) if (r !== c) {
+      const f = M[r][c];
+      for (let j = 0; j < 2 * n; j++) M[r][j] -= f * M[c][j];
+    }
+  }
+  return M.map(r => r.slice(n));
+}
+const mul = (A, B) => A.map(r => B[0].map((_, j) => r.reduce((s, v, k) => s + v * B[k][j], 0)));
+const mv = (A, v) => A.map(r => r.reduce((s, x, k) => s + x * v[k], 0));
+
+const AVANCO = [MV.O_AVANCAR, MV.C_AVANCAR, MV.MP_AVANCAR, MV.GP_AVANCAR];
+const E = ARM.map(i => AVANCO.map(m => CFG.SIGN[i] * CFG.K[i] * MOVIMENTOS[m][i]));
+const Dg = ARM.map((a, i) => ARM.map((_, j) => (i === j ? CFG.DPC[a] * E[i][i] : 0)));
+const Mq = mul(Dg, inv(E));
+const Mp = inv(Mq);
+const qMax = {};
+ARM.forEach(a => { qMax[a] = CFG.QMIN[a] + CFG.DPC[a] * ({ O: 18000, C: 20010, MP: 10680, GP: 23410 }[a] - CFG.PREF[a]); });
+
+function toQ(p) {
+  const r = mv(Mq, ARM.map(a => p[a] - CFG.PREF[a]));
+  const q = {}; ARM.forEach((a, i) => (q[a] = CFG.QMIN[a] + r[i])); return q;
+}
+function toP(q) {
+  const r = mv(Mp, ARM.map(a => q[a] - CFG.QMIN[a]));
+  const p = {}; ARM.forEach((a, i) => (p[a] = CFG.PREF[a] + r[i])); return p;
+}
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+function rate(ax) {
+  const v = pwm[ax];
+  if (Math.abs(v) < CFG.DEAD) return 0;
+  return CFG.SIGN[ax] * CFG.K[ax] * v;
+}
+
+function physicsStep(dt) {
+  simMs += dt * 1000;
+  if (realMode) return;
+  phys.B = clamp(phys.B + rate("B") * dt, CFG.B.pMin - 400, CFG.B.pMax + 1500);
+  phys.LT = clamp(phys.LT + rate("LT") * dt, -300, CFG.LT.pLen);
+  phys.G = clamp(phys.G + rate("G") * dt, -300, CFG.G.pClosed + 300);
+  const pc = {}; let moving = false;
+  for (const a of ARM) { const r = rate(a); pc[a] = phys[a] + r * dt; if (r) moving = true; }
+  if (!moving) return;
+  const q = toQ(pc); let parou = false;
+  for (const a of ARM) {
+    // u = contagens a partir da chave; batente mecanico 2 graus antes da chave e 6 depois do maximo
+    const d = CFG.DPC[a], u = (q[a] - CFG.QMIN[a]) / d;
+    const lo = -2 / Math.abs(d), hi = (qMax[a] - CFG.QMIN[a]) / d + 6 / Math.abs(d);
+    const uc = clamp(u, lo, hi);
+    if (uc !== u) { q[a] = CFG.QMIN[a] + uc * d; parou = true; }
+  }
+  const pn = parou ? toP(q) : pc;
+  for (const a of ARM) phys[a] = pn[a];
+}
+
+// chaves fim de curso (HIGH = acionada)
+function sw(ax) {
+  if (ax === "B") return phys.B <= CFG.B.pMin + 3 ? 1 : 0;
+  if (ax === "LT") return phys.LT <= 3 ? 1 : 0;
+  return (toQ(phys)[ax] - CFG.QMIN[ax]) / CFG.DPC[ax] <= 3 ? 1 : 0;
+}
+
+function poseInicial() {
+  const p = toP({ O: -15, C: 110, MP: 20, GP: -90 });
+  ARM.forEach(a => (phys[a] = p[a]));
+  phys.B = 15000; phys.LT = 15000; phys.G = 0;
+}
+
+// ---- relogio: o firmware cede a vez a cada passo da fisica ----
+let waiters = [];
+let lastT = performance.now();
+function scheduler() {
+  const now = performance.now();
+  physicsStep(Math.min(0.05, (now - lastT) / 1000));
+  lastT = now;
+  const w = waiters; waiters = []; w.forEach(f => f());
+  setTimeout(scheduler, 4);
+}
+const RESET = { reset: true };
+let fwGen = 0;
+async function frame() {
+  const g = fwGen;
+  await new Promise(r => waiters.push(r));
+  if (g !== fwGen) throw RESET;
+}
+
+// ---- serial ----
+const rxQueue = [];
+const Serial = {
+  print(x) { termWrite(String(x)); },
+  println(x = "") { termWrite(String(x) + "\n"); },
+  available() { return rxQueue.length; },
+  read() { return rxQueue.shift(); },
+};
+const millis = () => Math.floor(simMs);
+const constrain = (v, a, b) => Math.min(b, Math.max(a, v));
+
+// =====================================================================================
+//  FIRMWARE - porte de BracoTeclado.ino (mesma logica, linha a linha)
+// =====================================================================================
+const HOMING_NA_INICIALIZACAO = true;
+const HOMING_TIMEOUT_MS = 15000, TEMPO_PRIMEIRA_TECLA_MS = 600, TEMPO_REPETICAO_MS = 150;
+const INTERVALO_MONITOR_MS = 300, TEMPO_CONFIRMA_Z_MS = 2000, TIMEOUT_MOVIMENTO_MS = 30000;
+const LIM = { LT: [0, 100000000], B: [0, 53000], O: [0, 18000], C: [0, 20010],
+  MP: [0, 10680], GP: [0, 23410], G: [0, 26095] };
+const SEGURAR = 0, CONTINUO = 1;
+const P = { B: 0, O: 1, C: 2, MP: 3, GP: 4, G: 5, LT: 6, ESPERA: 7, VEL: 8, ZERAR: 9, INVALIDO: 10 };
+const NOMES_PASSO = ["B", "O", "C", "MP", "GP", "G", "LT", "ESPERA", "VEL", "ZERAR"];
+const MAX_PASSOS = 100;
+const EIXOS_AUTO = [
+  { ax: "B",  sobe: MV.B_AVANCAR,  desce: MV.B_RECUAR },
+  { ax: "O",  sobe: MV.O_RECUAR,   desce: MV.O_AVANCAR },
+  { ax: "C",  sobe: MV.C_RECUAR,   desce: MV.C_AVANCAR },
+  { ax: "MP", sobe: MV.MP_RECUAR,  desce: MV.MP_AVANCAR },
+  { ax: "GP", sobe: MV.GP_RECUAR,  desce: MV.GP_AVANCAR },
+  { ax: "G",  sobe: MV.G_FECHAR,   desce: MV.G_ABRIR },
+  { ax: "LT", sobe: MV.LT_DIREITA, desce: MV.LT_ESQUERDA },
+];
+const PROGRAMA_DEMO = [[8, 100], [5, 0], [0, 15000], [1, 6000], [2, 8000], [7, 500], [5, 15000], [7, 500],
+  [1, 2000], [0, 40000], [1, 6000], [7, 500], [5, 0], [7, 500], [1, 2000], [2, 2000], [0, 25000]]
+  .map(([t, v]) => ({ tipo: t, valor: v }));
+
+let movAtual, modo, velocidadePct, teclaRepetindo, ultimaTeclaMs, monitorLigado, ultimoMonitorMs;
+let pedidoZeramentoMs, aguardandoConfirmaZ, estadoEscape, programa, gravandoPrograma, gravacaoComErro;
+let linhaCmd, lendoLinhaCmd, ignorandoLinhaNoAbort, estado;
+function resetVars() {
+  movAtual = MV.NENHUM; modo = SEGURAR; velocidadePct = 100; teclaRepetindo = false; ultimaTeclaMs = 0;
+  monitorLigado = false; ultimoMonitorMs = 0; pedidoZeramentoMs = 0; aguardandoConfirmaZ = false;
+  estadoEscape = 0; programa = []; gravandoPrograma = false; gravacaoComErro = false;
+  linhaCmd = ""; lendoLinhaCmd = false; ignorandoLinhaNoAbort = false; estado = "Ligando…";
+}
+
+const lerPos = ax => Math.round(phys[ax] - off[ax]);
+const gravarPos = (ax, v) => { off[ax] = phys[ax] - v; };
+const digitalRead = ax => sw(ax);
+const HIGH = 1, LOW = 0;
+
+async function setup() {
+  pararTudo();
+  programa = PROGRAMA_DEMO.map(p => ({ ...p }));
+  Serial.println("\r\n=== Braco robotico - controle pelo teclado ===");
+  if (HOMING_NA_INICIALIZACAO) await zeramento();
+  mostrarAjuda();
+  estado = "Parado";
+}
+
+async function firmwareMain() {
+  try {
+    await setup();
+    while (true) {
+      while (Serial.available() > 0) await processarByte(Serial.read());
+      atualizarMovimento();
+      if (aguardandoConfirmaZ && millis() - pedidoZeramentoMs > TEMPO_CONFIRMA_Z_MS) {
+        aguardandoConfirmaZ = false;
+        Serial.println("Zeramento cancelado.");
+      }
+      if (monitorLigado && millis() - ultimoMonitorMs >= INTERVALO_MONITOR_MS) {
+        ultimoMonitorMs = millis();
+        mostrarPosicoes();
+      }
+      await frame();
+    }
+  } catch (e) { if (e !== RESET) console.error(e); }
+}
+
+async function processarByte(c) {
+  const code = c.charCodeAt(0);
+  if (lendoLinhaCmd) {
+    if (c === "\r" || c === "\n") { lendoLinhaCmd = false; await processarLinha(linhaCmd); }
+    else if (code === 8 || code === 127) { linhaCmd = linhaCmd.slice(0, -1); }
+    else if (linhaCmd.length < 39) { linhaCmd += c.toUpperCase(); }
+    return;
+  }
+  if (c === "#") { pararMovimento(null); lendoLinhaCmd = true; linhaCmd = ""; estadoEscape = 0; return; }
+  if (gravandoPrograma) return;
+
+  if (estadoEscape === 1) {
+    estadoEscape = c === "[" ? 2 : 0;
+    if (estadoEscape === 2) return;
+  } else if (estadoEscape === 2) {
+    estadoEscape = 0;
+    if (c === "D") { comandoMovimento(MV.LT_ESQUERDA); return; }
+    if (c === "C") { comandoMovimento(MV.LT_DIREITA); return; }
+    if (c >= "0" && c <= "9") estadoEscape = 3;
+    return;
+  } else if (estadoEscape === 3) {
+    const continua = (c >= "0" && c <= "9") || c === ";";
+    if (!continua) estadoEscape = 0;
+    return;
+  }
+  if (code === 27) { estadoEscape = 1; return; }
+  if (c === "\r" || c === "\n") return;
+  if (c !== "z" && c !== "Z") aguardandoConfirmaZ = false;
+
+  switch (c.toLowerCase()) {
+    case "q": comandoMovimento(MV.B_AVANCAR); break;
+    case "a": comandoMovimento(MV.B_RECUAR); break;
+    case "w": comandoMovimento(MV.O_AVANCAR); break;
+    case "s": comandoMovimento(MV.O_RECUAR); break;
+    case "e": comandoMovimento(MV.C_AVANCAR); break;
+    case "d": comandoMovimento(MV.C_RECUAR); break;
+    case "r": comandoMovimento(MV.MP_AVANCAR); break;
+    case "f": comandoMovimento(MV.MP_RECUAR); break;
+    case "t": comandoMovimento(MV.GP_AVANCAR); break;
+    case "g": comandoMovimento(MV.GP_RECUAR); break;
+    case "y": comandoMovimento(MV.G_FECHAR); break;   // [15/10] Y fecha
+    case "h": comandoMovimento(MV.G_ABRIR); break;    // [15/10] H abre
+    case "u": comandoMovimento(MV.LT_ESQUERDA); break;
+    case "j": comandoMovimento(MV.LT_DIREITA); break;
+    case " ": pararMovimento("Parado pelo usuario"); break;
+    case "+": case "=": alterarVelocidade(10); break;
+    case "-": case "_": alterarVelocidade(-10); break;
+    case "m":
+      pararMovimento(null);
+      modo = modo === SEGURAR ? CONTINUO : SEGURAR;
+      Serial.print("Modo: ");
+      Serial.println(modo === SEGURAR ? "SEGURAR (anda enquanto a tecla estiver pressionada)" : "CONTINUO (anda ate ESPACO ou limite)");
+      break;
+    case "p": mostrarPosicoes(); break;
+    case "v":
+      monitorLigado = !monitorLigado;
+      Serial.print("Monitoramento de posicao: "); Serial.println(monitorLigado ? "LIGADO" : "DESLIGADO");
+      break;
+    case "z":
+      pararMovimento(null);
+      if (aguardandoConfirmaZ && millis() - pedidoZeramentoMs <= TEMPO_CONFIRMA_Z_MS) {
+        aguardandoConfirmaZ = false; await zeramento();
+      } else {
+        aguardandoConfirmaZ = true; pedidoZeramentoMs = millis();
+        Serial.println("Pressione Z novamente para confirmar o ZERAMENTO de todos os eixos.");
+      }
+      break;
+    case "1": await executarPrograma(1); break;
+    case "x":
+      pararMovimento(null);
+      gravarPos("G", LIM.G[0]);
+      Serial.println("Garra: posicao atual definida como ABERTA (G=0).");
+      break;
+    case "?": case "i": mostrarAjuda(); break;
+    default: break;
+  }
+}
+
+function comandoMovimento(m) {
+  ultimaTeclaMs = millis();
+  if (m === movAtual) { teclaRepetindo = true; return; }
+  pararTudo();
+  movAtual = MV.NENHUM;
+  if (limiteAtingido(m)) {
+    const TECLAS = " QAWSEDRFTGHYUJ";
+    const oposto = m % 2 === 1 ? m + 1 : m - 1;
+    const porChave = [MV.B_RECUAR, MV.O_AVANCAR, MV.C_AVANCAR, MV.MP_AVANCAR, MV.GP_AVANCAR, MV.LT_ESQUERDA].includes(m);
+    Serial.print(">> "); Serial.print(MOVIMENTOS[m].nome);
+    Serial.print(porChave ? ": CHAVE FIM DE CURSO acionada (posicao de zero)." : ": LIMITE MAXIMO do encoder atingido.");
+    Serial.print(" Use a tecla "); Serial.print(TECLAS[oposto]); Serial.println(" para mover no outro sentido.");
+    return;
+  }
+  movAtual = m; teclaRepetindo = false;
+  aplicarPWM(m, velocidadePct);
+  estado = "Movendo: " + MOVIMENTOS[m].nome;
+  Serial.print("Movendo: "); Serial.print(MOVIMENTOS[m].nome);
+  Serial.print("  (vel "); Serial.print(velocidadePct); Serial.println("%)");
+}
+
+function atualizarMovimento() {
+  if (movAtual === MV.NENHUM) return;
+  if (limiteAtingido(movAtual)) { pararMovimento(">> LIMITE atingido"); return; }
+  if (modo === SEGURAR) {
+    const limite = teclaRepetindo ? TEMPO_REPETICAO_MS : TEMPO_PRIMEIRA_TECLA_MS;
+    if (millis() - ultimaTeclaMs > limite) pararMovimento(null);
+  }
+}
+
+function pararMovimento(motivo) {
+  const anterior = movAtual;
+  pararTudo(); movAtual = MV.NENHUM; teclaRepetindo = false;
+  if (estado.startsWith("Movendo")) estado = "Parado";
+  if (anterior !== MV.NENHUM) {
+    if (motivo != null) { Serial.print(motivo); Serial.print(" - "); }
+    Serial.print("Parou: "); Serial.print(MOVIMENTOS[anterior].nome); Serial.print("  ->  ");
+    mostrarPosicaoDoEixo(anterior);
+  } else if (motivo != null) {
+    Serial.println("Todos os motores parados.");
+  }
+}
+
+function limiteAtingido(m) {
+  switch (m) {
+    case MV.B_AVANCAR: return lerPos("B") >= LIM.B[1];
+    case MV.B_RECUAR:
+      if (digitalRead("B") === HIGH) { gravarPos("B", LIM.B[0]); return true; }
+      return lerPos("B") <= LIM.B[0];
+    case MV.O_AVANCAR:
+      if (digitalRead("O") === HIGH) { gravarPos("O", LIM.O[0]); return true; }
+      return false;
+    case MV.O_RECUAR: return lerPos("O") >= LIM.O[1];
+    case MV.C_AVANCAR:
+      if (digitalRead("C") === HIGH) return true;   // [14/10] sem rezerar: contagem deslocada pela compensacao
+      return false;
+    case MV.C_RECUAR: return lerPos("C") >= LIM.C[1];
+    case MV.MP_AVANCAR:
+      if (digitalRead("MP") === HIGH) return true;   // [14/10] sem rezerar: contagem deslocada pela compensacao
+      return false;
+    case MV.MP_RECUAR: return lerPos("MP") >= LIM.MP[1];
+    case MV.GP_AVANCAR:
+      if (digitalRead("GP") === HIGH) return true;   // [14/10] sem rezerar: contagem deslocada pela compensacao
+      return false;
+    case MV.GP_RECUAR: return lerPos("GP") >= LIM.GP[1];
+    case MV.G_ABRIR: return modo === CONTINUO && lerPos("G") < LIM.G[0];
+    case MV.G_FECHAR: return modo === CONTINUO && lerPos("G") >= LIM.G[1];
+    case MV.LT_ESQUERDA: return digitalRead("LT") === HIGH;
+    case MV.LT_DIREITA: return lerPos("LT") >= LIM.LT[1];
+    default: return true;
+  }
+}
+
+const escala = (v, pct) => constrain(Math.trunc(v * pct / 100), -255, 255);
+function aplicarPWM(m, pct) { const d = MOVIMENTOS[m]; AXES.forEach(ax => (pwm[ax] = escala(d[ax], pct))); }
+function pararTudo() { AXES.forEach(ax => (pwm[ax] = 0)); }
+function alterarVelocidade(delta) {
+  velocidadePct = constrain(velocidadePct + delta, 20, 150);
+  Serial.print("Velocidade: "); Serial.print(velocidadePct); Serial.println("%");
+  if (movAtual !== MV.NENHUM) aplicarPWM(movAtual, velocidadePct);
+}
+
+async function zeramento() {
+  const antes = estado;
+  estado = "Zerando…";
+  Serial.println("ZERAMENTO iniciado (ESPACO aborta)...");
+  pararTudo(); movAtual = MV.NENHUM;
+  const etapas = [
+    { nome: "Base", ax: "B", mov: MV.B_RECUAR },
+    { nome: "Movimento punho", ax: "MP", mov: MV.MP_AVANCAR },
+    { nome: "Giro punho", ax: "GP", mov: MV.GP_AVANCAR },
+    { nome: "Cotovelo", ax: "C", mov: MV.C_AVANCAR },
+    { nome: "Ombro", ax: "O", mov: MV.O_AVANCAR },
+  ];
+  for (const et of etapas) {
+    Serial.print("  Zerando "); Serial.print(et.nome); Serial.print("... ");
+    const inicio = millis();
+    if (digitalRead(et.ax) === LOW) aplicarPWM(et.mov, 100);
+    while (digitalRead(et.ax) === LOW) {
+      if (abortarPeloTeclado()) { pararTudo(); Serial.println("\r\nZERAMENTO ABORTADO pelo usuario."); estado = "Parado"; return false; }
+      if (millis() - inicio > HOMING_TIMEOUT_MS) { Serial.print("TIMEOUT (chave nao respondeu) - "); break; }
+      await frame();
+    }
+    pararTudo();
+    gravarPos(et.ax, LIM[et.ax][0]);
+    Serial.println("ok");
+  }
+  // [13/10] re-zera os eixos que continuam na chave (as compensacoes mexeram nas contagens)
+  for (const et of etapas) if (digitalRead(et.ax) === HIGH) gravarPos(et.ax, LIM[et.ax][0]);
+  const inicio = millis();
+  if (lerPos("G") > LIM.G[0]) {
+    Serial.print("  Abrindo garra... ");
+    aplicarPWM(MV.G_ABRIR, 100);
+    while (lerPos("G") > LIM.G[0]) {
+      if (abortarPeloTeclado()) { pararTudo(); Serial.println("\r\nZERAMENTO ABORTADO pelo usuario."); estado = "Parado"; return false; }
+      if (millis() - inicio > HOMING_TIMEOUT_MS) break;
+      await frame();
+    }
+    pararTudo(); Serial.println("ok");
+  }
+  Serial.println("ZERAMENTO concluido.");
+  mostrarPosicoes();
+  estado = antes.startsWith("Executando") ? antes : "Parado";
+  return true;
+}
+
+function abortarPeloTeclado() {
+  while (Serial.available() > 0) {
+    const c = Serial.read();
+    if (c === "#") ignorandoLinhaNoAbort = true;
+    else if (c === "\r" || c === "\n") ignorandoLinhaNoAbort = false;
+    else if (!ignorandoLinhaNoAbort && (c === " " || c.charCodeAt(0) === 27)) return true;
+  }
+  return false;
+}
+
+function tipoDoComando(cmd) { const i = NOMES_PASSO.indexOf(cmd); return i < 0 ? P.INVALIDO : i; }
+function atol(s) { const m = /^\s*([+-]?\d+)/.exec(s || ""); return m ? parseInt(m[1], 10) : 0; }
+
+async function processarLinha(texto) {
+  const toks = texto.split(/[ \t=:]+/).filter(Boolean);
+  const cmd = toks[0];
+  if (cmd == null) return;
+  if (cmd[0] === "/" || cmd[0] === "-" || cmd[0] === "#") return;
+  const arg = toks[1];
+  const valor = arg != null ? atol(arg) : 0;
+
+  if (cmd === "INICIO") {
+    gravandoPrograma = true; gravacaoComErro = false; programa = [];
+    Serial.println("Gravando programa... (termine com #FIM)"); return;
+  }
+  if (cmd === "FIM") {
+    if (!gravandoPrograma) return;
+    gravandoPrograma = false;
+    Serial.print("Programa gravado com "); Serial.print(programa.length); Serial.println(" passos.");
+    if (gravacaoComErro) Serial.println("ATENCAO: algumas linhas foram ignoradas (invalidas ou programa cheio).");
+    listarPrograma();
+    Serial.println("Tecla 1 ou #EXECUTAR <vezes> para rodar.");
+    return;
+  }
+  if (cmd === "EXECUTAR" || cmd === "EXEC") {
+    if (gravandoPrograma) return;
+    await executarPrograma(arg != null ? valor : 1); return;
+  }
+  if (cmd === "LISTAR") { listarPrograma(); return; }
+  if (cmd === "POS") { mostrarPosicoes(); return; }
+
+  const tipo = tipoDoComando(cmd);
+  if (tipo === P.INVALIDO || (tipo !== P.ZERAR && arg == null)) {
+    gravacaoComErro = gravandoPrograma;
+    Serial.print("Comando invalido: #"); Serial.println(cmd); return;
+  }
+  if (gravandoPrograma) {
+    if (programa.length < MAX_PASSOS) programa.push({ tipo, valor }); else gravacaoComErro = true;
+    return;
+  }
+  await executarPasso(tipo, valor);
+  Serial.println("PRONTO");
+}
+
+function imprimirPasso(tipo, valor) { Serial.print(NOMES_PASSO[tipo]); if (tipo !== P.ZERAR) { Serial.print(" "); Serial.print(valor); } }
+function listarPrograma() {
+  Serial.print("Programa ("); Serial.print(programa.length); Serial.println(" passos):");
+  programa.forEach((p, i) => { Serial.print("  "); Serial.print(i + 1); Serial.print(": #"); imprimirPasso(p.tipo, p.valor); Serial.println(); });
+}
+
+async function executarPrograma(vezes) {
+  pararMovimento(null);
+  if (programa.length === 0) { Serial.println("Nenhum programa gravado (use #INICIO ... #FIM)."); return; }
+  const velocidadeAntes = velocidadePct;
+  ignorandoLinhaNoAbort = false;
+  Serial.println("EXECUTANDO programa (ESPACO interrompe)...");
+  let ok = true;
+  for (let ciclo = 1; ok && (vezes <= 0 || ciclo <= vezes); ciclo++) {
+    Serial.print("-- Ciclo "); Serial.println(ciclo);
+    for (let i = 0; ok && i < programa.length; i++) {
+      estado = `Executando passo ${i + 1}/${programa.length}`;
+      Serial.print("Passo "); Serial.print(i + 1); Serial.print("/"); Serial.print(programa.length); Serial.print(": ");
+      imprimirPasso(programa[i].tipo, programa[i].valor); Serial.print(" ... ");
+      ok = await executarPasso(programa[i].tipo, programa[i].valor);
+    }
+  }
+  pararTudo();
+  velocidadePct = velocidadeAntes;
+  estado = "Parado";
+  Serial.println(ok ? "PROGRAMA CONCLUIDO." : "PROGRAMA INTERROMPIDO.");
+  mostrarPosicoes();
+}
+
+async function executarPasso(tipo, valor) {
+  switch (tipo) {
+    case P.ESPERA: {
+      const inicio = millis();
+      while (millis() - inicio < Math.max(valor, 0)) {
+        if (abortarPeloTeclado()) { Serial.println("interrompido"); return false; }
+        await frame();
+      }
+      Serial.println("ok"); return true;
+    }
+    case P.VEL:
+      velocidadePct = constrain(valor, 20, 150);
+      Serial.print("velocidade "); Serial.print(velocidadePct); Serial.println("%"); return true;
+    case P.ZERAR:
+      Serial.println(); return await zeramento();
+    default:
+      return await moverPara(EIXOS_AUTO[tipo], valor);
+  }
+}
+
+async function moverPara(eixo, alvo) {
+  // [14/10] ombro, cotovelo e punho tem contagens deslocadas pelas compensacoes: o alvo nao e
+  // cortado (a chave fim de curso e o limite maximo continuam protegendo o eixo)
+  if (!["O", "C", "MP", "GP"].includes(eixo.ax)) alvo = constrain(alvo, LIM[eixo.ax][0], LIM[eixo.ax][1]);
+  let pos = lerPos(eixo.ax);
+  if (pos === alvo) { Serial.println("ja esta na posicao"); return true; }
+  const subindo = alvo > pos;
+  const m = subindo ? eixo.sobe : eixo.desce;
+  if (limiteAtingido(m)) { Serial.println("LIMITE/chave fim de curso - pulando"); return true; }
+  let ok = true;
+  const inicio = millis();
+  aplicarPWM(m, velocidadePct);
+  while (true) {
+    pos = lerPos(eixo.ax);
+    if (subindo ? pos >= alvo : pos <= alvo) break;
+    if (limiteAtingido(m)) { Serial.print("LIMITE atingido "); break; }
+    if (abortarPeloTeclado()) { Serial.print("interrompido "); ok = false; break; }
+    if (millis() - inicio > TIMEOUT_MOVIMENTO_MS) { Serial.print("TIMEOUT (eixo travado ou encoder sem sinal?) "); ok = false; break; }
+    await frame();
+  }
+  pararTudo();
+  Serial.print("pos="); Serial.println(lerPos(eixo.ax));
+  return ok;
+}
+
+function mostrarPosicaoDoEixo(m) {
+  const ax = [null, "B", "B", "O", "O", "C", "C", "MP", "MP", "GP", "GP", "G", "G", "LT", "LT"][m];
+  if (!ax) { Serial.println(); return; }
+  Serial.print(ax + "="); Serial.println(lerPos(ax));
+}
+function mostrarPosicoes() {
+  Serial.println(`POS  LT=${lerPos("LT")}  B=${lerPos("B")}  O=${lerPos("O")}  C=${lerPos("C")}  MP=${lerPos("MP")}  GP=${lerPos("GP")}  G=${lerPos("G")}`);
+  Serial.println(`CHAVES LT=${sw("LT")}  B=${sw("B")}  O=${sw("O")}  C=${sw("C")}  MP=${sw("MP")}  GP=${sw("GP")}`);
+}
+function mostrarAjuda() {
+  [
+    "--------------------------------------------------",
+    " Q / A  Base             (recuar / avancar)",
+    " W / S  Ombro            (recuar / avancar)",
+    " E / D  Cotovelo         (recuar / avancar)",
+    " R / F  Movimento punho  (recuar / avancar)",
+    " T / G  Giro do punho    (recuar / avancar)",
+    " Y / H  Garra            (fechar / abrir)   X  garra atual = aberta (G=0)",
+    " U / J  Linha transversal (esquerda / direita)  ou setas <- ->",
+    " ESPACO PARAR TUDO",
+    " + / -  Velocidade        M  Modo segurar/continuo",
+    " P  Posicoes   V  Monitorar posicao   Z Z  Zeramento   ?  Ajuda",
+    " 1  Executa o programa automatico gravado (ESPACO interrompe)",
+    " Comandos de texto: #INICIO  #B 25000  #O 6000  #C 8000  #G 15000",
+    "   #ESPERA 500  #VEL 80  #ZERAR  #FIM  #EXECUTAR 3  #LISTAR  #POS",
+    "--------------------------------------------------",
+  ].forEach(l => Serial.println(l));
+  Serial.print("Modo: "); Serial.print(modo === SEGURAR ? "SEGURAR" : "CONTINUO");
+  Serial.print("   Velocidade: "); Serial.print(velocidadePct); Serial.println("%");
+}
+
+// =====================================================================================
+//  TERMINAL
+// =====================================================================================
+const termEl = document.getElementById("term");
+const echoEl = document.getElementById("echo");
+let termLines = [], termCur = "", termDirty = true;
+function termWrite(s) {
+  for (const ch of s) {
+    if (ch === "\r") continue;
+    if (ch === "\n") { termLines.push(termCur); termCur = ""; } else termCur += ch;
+  }
+  if (termLines.length > 800) termLines = termLines.slice(-600);
+  termDirty = true;
+}
+function termNote(s) { termWrite("\n[bancada] " + s + "\n"); }
+function termFlush() {
+  if (!termDirty) return;
+  termDirty = false;
+  const nearBottom = termEl.scrollHeight - termEl.scrollTop - termEl.clientHeight < 40;
+  termEl.textContent = termLines.slice(-500).join("\n") + "\n" + termCur;
+  if (nearBottom) termEl.scrollTop = termEl.scrollHeight;
+}
+
+// envio de bytes: simulador ou braco real
+let echoLine = null;
+function sendBytes(arr) {
+  for (const ch of arr) {
+    if (ch === "#") echoLine = "#";
+    else if (echoLine !== null) {
+      if (ch === "\r" || ch === "\n") echoLine = null;
+      else if (ch === "\b") echoLine = echoLine.slice(0, -1);
+      else echoLine += ch;
+    }
+  }
+  echoEl.textContent = echoLine ? "digitando: " + echoLine.toUpperCase() : "";
+  if (realMode && realLink) {
+    realLink.write(arr.join(""));
+  } else if (!realMode) {
+    rxQueue.push(...arr);
+  }
+}
+
+function keyToBytes(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return null;
+  switch (e.key) {
+    case "Enter": return ["\r"];
+    case "Backspace": return ["\b"];
+    case "Escape": return ["\x1b"];
+    case "ArrowLeft": return ["\x1b", "[", "D"];
+    case "ArrowRight": return ["\x1b", "[", "C"];
+    case "ArrowUp": return ["\x1b", "[", "A"];
+    case "ArrowDown": return ["\x1b", "[", "B"];
+  }
+  return e.key.length === 1 ? [e.key] : null;
+}
+const editavel = t => t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
+// teclas de movimento: pela ponte do app viram "segurar/soltar" (a repeticao e feita no PC)
+const HOLD_KEYS = new Set([..."qawsedrftgyhuj", "arrowleft", "arrowright"]);
+const usaSegurar = () => realMode && realLink && realLink.hold;
+let teclaSegurada = null;
+document.addEventListener("keydown", e => {
+  if (editavel(e.target)) return;
+  if (e.target && e.target.tagName === "BUTTON" && e.key === "Enter") return;
+  if (e.target && e.target.tagName === "SELECT") return;
+  const b = keyToBytes(e);
+  if (!b) return;
+  e.preventDefault();
+  const k = e.key.toLowerCase();
+  if (usaSegurar() && HOLD_KEYS.has(k) && echoLine === null) {
+    if (e.repeat || teclaSegurada === k) return;
+    teclaSegurada = k;
+    realLink.holdStart(b.join(""));
+    return;
+  }
+  sendBytes(b);
+});
+document.addEventListener("keyup", e => {
+  if (e.key === " " && !editavel(e.target)) e.preventDefault();
+  if (teclaSegurada && e.key.toLowerCase() === teclaSegurada) { teclaSegurada = null; if (realLink && realLink.hold) realLink.holdStop(); }
+  if (realMode && HOLD_KEYS.has(e.key.toLowerCase()) && echoLine === null && !editavel(e.target)) pedirPosicoes();
+});
+window.addEventListener("blur", () => { if (teclaSegurada) { teclaSegurada = null; if (realLink && realLink.hold) realLink.holdStop(); } });
+
+// =====================================================================================
+//  PAINEL: tabela de eixos e botoes
+// =====================================================================================
+const UI_AXES = [
+  { ax: "B",  nome: "Base",              k: [["Q", "recuar"], ["A", "avançar"]] },
+  { ax: "O",  nome: "Ombro",             k: [["W", "recuar"], ["S", "avançar"]] },
+  { ax: "C",  nome: "Cotovelo",          k: [["E", "recuar"], ["D", "avançar"]] },
+  { ax: "MP", nome: "Movimento punho",   k: [["R", "recuar"], ["F", "avançar"]] },
+  { ax: "GP", nome: "Giro do punho",     k: [["T", "recuar"], ["G", "avançar"]] },
+  { ax: "G",  nome: "Garra",             k: [["Y", "fechar"], ["H", "abrir"]] },
+  { ax: "LT", nome: "Linha transversal", k: [["U", "esquerda"], ["J", "direita"]] },
+];
+function holdButton(btn, ch) {
+  let t1 = null, t2 = null;
+  let segurando = false;
+  const stop = () => {
+    const estavaAtivo = btn.classList.contains("on");
+    clearTimeout(t1); clearInterval(t2); t1 = t2 = null; btn.classList.remove("on");
+    if (segurando) { segurando = false; if (realLink && realLink.hold) realLink.holdStop(); }
+    if (realMode && estavaAtivo) pedirPosicoes();
+  };
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+    stop(); btn.classList.add("on");
+    if (usaSegurar()) { segurando = true; realLink.holdStart(ch); return; }
+    sendBytes([ch]);
+    t1 = setTimeout(() => { t2 = setInterval(() => sendBytes([ch]), 33); }, 500);   // igual a repeticao do Windows
+  });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => btn.addEventListener(ev, stop));
+}
+const rowRefs = {};
+const tbody = document.getElementById("axesBody");
+UI_AXES.forEach(u => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td class="name">${u.nome}<small>#${u.ax}</small></td><td><div class="keys"></div></td>
+    <td class="num enc"></td><td class="num pos"></td><td class="swc"></td>`;
+  const keys = tr.querySelector(".keys");
+  u.k.forEach(([key, lbl]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "jog";
+    b.innerHTML = `<kbd>${key}</kbd>${lbl}`;
+    b.setAttribute("aria-label", `${u.nome}: ${lbl} (tecla ${key})`);
+    holdButton(b, key.toLowerCase());
+    keys.appendChild(b);
+  });
+  tbody.appendChild(tr);
+  rowRefs[u.ax] = { enc: tr.querySelector(".enc"), pos: tr.querySelector(".pos"), sw: tr.querySelector(".swc") };
+  rowRefs[u.ax].sw.innerHTML = u.ax === "G" ? `<span class="na">sem chave</span>` : `<span class="sw" aria-label="chave"></span>`;
+});
+const ACOES = [
+  [" ", "PARAR", "Espaço", "stop"], ["+", "Vel +", "+"], ["-", "Vel −", "−"], ["m", "Modo", "M"],
+  ["p", "Posições", "P"], ["v", "Monitor", "V"], ["z", "Zerar", "Z Z"], ["x", "Garra = aberta", "X"],
+  ["1", "▶ Executar", "1"], ["?", "Ajuda", "?"],
+];
+const actionsEl = document.getElementById("actions");
+ACOES.forEach(([ch, lbl, k, cls]) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "act" + (cls ? " " + cls : "");
+  b.innerHTML = `<span>${lbl}</span><kbd>${k}</kbd>`;
+  b.addEventListener("click", () => sendBytes([ch]));
+  actionsEl.appendChild(b);
+});
+
+// =====================================================================================
+//  PROGRAMA
+// =====================================================================================
+const progEl = document.getElementById("prog");
+progEl.value = [
+  "#// Programa de exemplo: o mesmo texto funciona no PuTTY",
+  "#// Ajuste os pontos com o teclado e Inserir ponto atual",
+  "#INICIO",
+  "#VEL 100", "#G 0", "#B 15000", "#O 6000", "#C 8000", "#ESPERA 500",
+  "#G 15000", "#ESPERA 500", "#O 2000", "#B 40000", "#O 6000", "#ESPERA 500",
+  "#G 0", "#ESPERA 500", "#O 2000", "#C 2000", "#B 25000",
+  "#FIM",
+  "#EXECUTAR 1",
+].join("\n");
+// Executar usa o numero de repeticoes escrito no quadro (#EXECUTAR 3); sem essa linha, roda 1 vez
+const btnExecutar = document.getElementById("btnExecutar");
+function vezesDoQuadro() {
+  const m = [...progEl.value.matchAll(/^#\s*EXEC(?:UTAR)?\s+(-?\d+)/gim)];
+  return m.length ? parseInt(m[m.length - 1][1], 10) : 1;
+}
+function rotuloExecutar() {
+  const n = vezesDoQuadro();
+  btnExecutar.textContent = n <= 0 ? "▶ Executar (sem fim)" : n === 1 ? "▶ Executar" : `▶ Executar (${n}×)`;
+}
+setInterval(rotuloExecutar, 400); rotuloExecutar();
+btnExecutar.addEventListener("click", e => {
+  if (!realMode && estado.startsWith("Executando")) { termNote("O programa ainda está rodando. Aperte Parar antes de executar de novo."); e.currentTarget.blur(); return; }
+  sendBytes([..."#EXECUTAR " + vezesDoQuadro(), "\r"]); e.currentTarget.blur(); });
+document.getElementById("btnPararProg").addEventListener("click", e => { sendBytes([" "]); e.currentTarget.blur(); });
+document.getElementById("btnEnviar").addEventListener("click", () => {
+  const txt = progEl.value.replace(/\r\n?/g, "\n");
+  sendBytes([...txt.split("\n").join("\r"), "\r"]);
+});
+document.getElementById("btnPonto").addEventListener("click", () => {
+  const linhas = ["#// ponto", ...["LT", "B", "O", "C", "MP", "GP", "G"].map(a => `#${a} ${lerPos(a)}`)].join("\n") + "\n";
+  const s = progEl.selectionStart ?? progEl.value.length;
+  let pos = s;
+  const fim = progEl.value.indexOf("#FIM");
+  if (document.activeElement !== progEl && fim >= 0) pos = fim;
+  else { const nl = progEl.value.lastIndexOf("\n", pos - 1); pos = nl + 1; }
+  progEl.value = progEl.value.slice(0, pos) + linhas + progEl.value.slice(pos);
+  progEl.focus();
+  progEl.selectionStart = progEl.selectionEnd = pos + linhas.length;
+});
+// Limpar programa: o primeiro clique pede confirmacao, o segundo (em ate 3 s) limpa
+const PROG_NOVO = ["#// Programa novo: insira os pontos entre #INICIO e #FIM", "#INICIO", "#FIM", "#EXECUTAR 1"].join("\n");
+let limparTimer = null;
+document.getElementById("btnLimpar").addEventListener("click", e => {
+  const b = e.currentTarget;
+  b.blur();
+  if (!limparTimer) {
+    b.textContent = "Confirmar: limpar?"; b.classList.add("stopbtn");
+    limparTimer = setTimeout(() => { limparTimer = null; b.textContent = "Limpar programa"; b.classList.remove("stopbtn"); }, 3000);
+    return;
+  }
+  clearTimeout(limparTimer); limparTimer = null;
+  b.textContent = "Limpar programa"; b.classList.remove("stopbtn");
+  if (estado.startsWith("Executando")) sendBytes([" "]);   // interrompe o programa que estiver rodando
+  progEl.value = PROG_NOVO;
+  progEl.scrollTop = 0;
+  termNote("Quadro do programa limpo. Grave os pontos entre #INICIO e #FIM.");
+});
+document.getElementById("btnCopiar").addEventListener("click", async e => {
+  const b = e.currentTarget;
+  try { await navigator.clipboard.writeText(progEl.value); b.textContent = "Copiado"; }
+  catch (_) { progEl.focus(); progEl.select(); b.textContent = "Texto selecionado: Ctrl+C"; }
+  setTimeout(() => (b.textContent = "Copiar para o PuTTY"), 1800);
+});
+
+// =====================================================================================
+//  CENA 3D
+// =====================================================================================
+const stageEl = document.getElementById("stage");
+const canvas = document.getElementById("cv");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1.6, 0.01, 20);
+camera.position.set(1.7, 1.3, 1.65);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.target.set(0.42, 0.45, 0.0);
+controls.enableDamping = true;
+controls.enableKeys = false;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 0.35; controls.maxDistance = 3;
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f8c, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.85);
+sun.position.set(0.6, 1.6, 0.9); sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -1, right: 1, top: 1, bottom: -1, near: 0.1, far: 4 });
+scene.add(sun);
+
+const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.55, metalness: 0.15, ...o });
+const mBody = mat(0xe3e4df), mDark = mat(0x1e2326), mAlu = mat(0xb6bcbe, { metalness: 0.6, roughness: 0.35 });
+const mBronze = mat(0x8a5a2b, { metalness: 0.4 }), mBelt = mat(0x121517, { roughness: 0.85 });
+function box(w, h, d, m, y = 0) { const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); g.position.y = y; g.castShadow = true; g.receiveShadow = true; return g; }
+function cylX(r, len, m) { const geo = new THREE.CylinderGeometry(r, r, len, 28); geo.rotateZ(Math.PI / 2); const c = new THREE.Mesh(geo, m); c.castShadow = true; return c; }
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), mat(0xc6cecb, { metalness: 0, roughness: 0.95 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+let grid = null;
+
+// trilho da linha transversal: duas guias e o fuso
+[-0.065, 0.065].forEach(z => { const r = cylX(0.012, 1.0, mAlu); r.position.set(0.47, 0.035, z); scene.add(r); });
+const fuso = cylX(0.009, 1.0, mDark); fuso.position.set(0.47, 0.035, 0); scene.add(fuso);
+[-0.03, 0.97].forEach(x => { const s = box(0.04, 0.07, 0.2, mBody, 0.035); s.position.x = x; scene.add(s); });
+
+// esteira paralela ao trilho
+const CONV = { z: 0.28, w: 0.14, top: 0.07 };
+const belt = box(1.15, 0.012, CONV.w, mBelt, CONV.top - 0.006); belt.position.set(0.47, belt.position.y, CONV.z); scene.add(belt);
+[-1, 1].forEach(sd => { const f = box(1.15, CONV.top, 0.02, mAlu, CONV.top / 2); f.position.set(0.47, f.position.y, CONV.z + sd * (CONV.w / 2 + 0.01)); scene.add(f); });
+
+// carro, caixa fixa e torre giratoria
+const carriage = new THREE.Group(); scene.add(carriage);
+carriage.add(box(0.32, 0.025, 0.3, mBody, 0.06));
+carriage.add(box(0.26, 0.22, 0.25, mBody, 0.1825));
+const base = new THREE.Group(); base.position.y = 0.295; carriage.add(base);
+const torre = (() => {
+  // perfil "casinha" da carcaca giratoria: frente reta (+z), ponta voltada para tras,
+  // deslocada para tras do eixo (no zero ela fica por cima da esteira)
+  const pts = [[0.085, 0], [0.085, 0.22], [0.0, 0.26], [-0.155, 0.26], [-0.27, 0.17], [-0.27, 0.09], [-0.155, 0]];
+  const sh = new THREE.Shape(); pts.forEach(([z, y], i) => (i ? sh.lineTo(-z, y) : sh.moveTo(-z, y)));
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.24, bevelEnabled: false });
+  geo.rotateY(Math.PI / 2); geo.translate(-0.12, 0, 0);
+  const m = new THREE.Mesh(geo, mBody); m.castShadow = true; m.receiveShadow = true; return m;
+})();
+base.add(torre);
+const L1 = CFG.DIM.upper, L2 = CFG.DIM.fore;
+const shoulder = new THREE.Group(); shoulder.position.set(0, CFG.DIM.shoulderY, CFG.DIM.shoulderZ); base.add(shoulder);
+shoulder.add(cylX(0.04, 0.12, mDark));
+shoulder.add(box(0.1, L1 + 0.05, 0.055, mBody, L1 / 2));
+shoulder.add(box(0.07, L1 * 0.75, 0.058, mBelt, L1 / 2));          // correias aparentes
+const bucha = cylX(0.02, 0.112, mBronze); bucha.position.y = L1; shoulder.add(bucha);
+const elbow = new THREE.Group(); elbow.position.y = L1; shoulder.add(elbow);
+const ante = box(0.045, L2 + 0.04, 0.055, mBody, L2 / 2); ante.position.x = 0.07; elbow.add(ante);
+const wrist = new THREE.Group(); wrist.position.y = L2; elbow.add(wrist);
+const polia = cylX(0.03, 0.1, mDark); polia.position.x = 0.03; wrist.add(polia);
+wrist.add(box(0.04, 0.1, 0.034, mDark, -0.065));                    // pega preta sobre o punho
+const roll = new THREE.Group(); roll.position.y = CFG.DIM.wrist; wrist.add(roll);
+roll.add(box(0.04, 0.03, 0.04, mDark, -0.01));
+roll.add(box(0.095, 0.02, 0.05, mAlu, 0.01));
+const fingerL = box(0.016, 0.075, 0.042, mAlu, 0.0575), fingerR = box(0.016, 0.075, 0.042, mAlu, 0.0575);
+roll.add(fingerL, fingerR);
+const grip = new THREE.Object3D(); grip.position.y = 0.07; roll.add(grip);
+const tip = new THREE.Object3D(); tip.position.y = 0.095; roll.add(tip);
+
+// bloco na esteira e alvo na mesa
+const CUBE = 0.045;
+const CUBE_START = new THREE.Vector3(0.42, CONV.top + CUBE / 2, CONV.z);
+const PAD = { x: 0.585, z: -0.137, half: 0.055 };   // dentro do giro da base (~110 graus)
+const cube = new THREE.Mesh(new THREE.BoxGeometry(CUBE, CUBE, CUBE), mat(0xc98a3e, { roughness: 0.75, metalness: 0 }));
+cube.castShadow = true; cube.position.copy(CUBE_START); scene.add(cube);
+const padTex = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d");
+  g.fillStyle = "#f2c230"; g.fillRect(0, 0, 128, 128); g.strokeStyle = "#1c2427"; g.lineWidth = 12;
+  for (let i = -128; i < 256; i += 32) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 128, 128); g.stroke(); }
+  return new THREE.CanvasTexture(c);
+})();
+const pad = new THREE.Mesh(new THREE.BoxGeometry(PAD.half * 2, 0.004, PAD.half * 2), new THREE.MeshStandardMaterial({ map: padTex, roughness: 0.8 }));
+pad.position.set(PAD.x, 0.002, PAD.z); pad.receiveShadow = true; scene.add(pad);
+
+let grasped = false, prevW = 1, falling = false, vy = 0, entregas = 0;
+const taskStatus = document.getElementById("taskStatus");
+const sobreAlvo = p => Math.abs(p.x - PAD.x) < PAD.half && Math.abs(p.z - PAD.z) < PAD.half;
+const sobreEsteira = p => Math.abs(p.z - CONV.z) < CONV.w / 2;
+function soltar() {
+  grasped = false;
+  scene.attach(cube);
+  const e = new THREE.Euler().setFromQuaternion(cube.quaternion, "YXZ");
+  cube.rotation.set(0, e.y, 0);
+  falling = true; vy = 0;
+}
+function reporPeca() {
+  if (grasped) { scene.attach(cube); grasped = false; }
+  falling = false; cube.rotation.set(0, 0, 0); cube.position.copy(CUBE_START); taskStatus.textContent = "";
+}
+document.getElementById("btnCubo").addEventListener("click", reporPeca);
+
+function applyTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  const v = n => cs.getPropertyValue(n).trim() || "#888888";
+  scene.background = new THREE.Color(v("--stage"));
+  floor.material.color.set(v("--floor"));
+  if (grid) scene.remove(grid);
+  grid = new THREE.GridHelper(4, 40, new THREE.Color(v("--grid")), new THREE.Color(v("--grid")));
+  grid.position.y = 0.0005; grid.material.transparent = true; grid.material.opacity = 0.55;
+  scene.add(grid);
+}
+applyTheme();
+try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme); } catch (_) {}
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+function resize() {
+  const r = stageEl.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stageEl); resize();
+
+const rad = d => d * Math.PI / 180;
+const qBase = () => CFG.B.qMin + (phys.B - CFG.B.pMin) * (CFG.B.qMax - CFG.B.qMin) / (CFG.B.pMax - CFG.B.pMin);
+const larguraGarra = () => CFG.G.maxOpen * (1 - clamp(phys.G / CFG.G.pClosed, 0, 1));
+const xLinha = () => CFG.LT.xStart + clamp(phys.LT, 0, CFG.LT.pLen) / CFG.LT.pLen * CFG.LT.xLen;
+
+const warnEl = document.getElementById("warn");
+const chipFonte = document.getElementById("chipFonte"), chipModo = document.getElementById("chipModo");
+const chipVel = document.getElementById("chipVel"), chipEstado = document.getElementById("chipEstado");
+const gp = new THREE.Vector3(), tp = new THREE.Vector3(), wp = new THREE.Vector3();
+let lastUi = 0, lastFrame = performance.now();
+
+function render(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
+  const q = toQ(phys);
+  carriage.position.x = xLinha();
+  base.rotation.y = rad(qBase());
+  shoulder.rotation.x = rad(q.O);
+  elbow.rotation.x = rad(q.C);
+  wrist.rotation.x = rad(q.MP);
+  roll.rotation.y = rad(q.GP);
+  const w = larguraGarra();
+  const wv = grasped ? Math.max(w, CUBE) : w;
+  fingerL.position.x = -(wv / 2 + 0.008); fingerR.position.x = wv / 2 + 0.008;
+  scene.updateMatrixWorld();
+
+  grip.getWorldPosition(gp);
+  if (!grasped && !falling) {
+    if (w <= CUBE + 0.002 && prevW > CUBE + 0.002 && gp.distanceTo(cube.position) < 0.03) {
+      grasped = true; roll.attach(cube); taskStatus.textContent = "";
+    }
+  } else if (grasped && w > CUBE + 0.004) soltar();
+  prevW = w;
+  if (falling) {
+    const alvo = (sobreAlvo(cube.position) ? 0.004 : sobreEsteira(cube.position) ? CONV.top : 0) + CUBE / 2;
+    vy += 9.8 * dt; cube.position.y -= vy * dt;
+    if (cube.position.y <= alvo) {
+      cube.position.y = alvo; falling = false;
+      if (sobreAlvo(cube.position)) { entregas++; taskStatus.innerHTML = `<span class="done">Entregue no alvo (${entregas})</span>`; }
+    }
+  }
+  tip.getWorldPosition(tp); wrist.getWorldPosition(wp);
+  warnEl.hidden = !(tp.y < 0.002 || wp.y < 0.02);
+
+  if (now - lastUi > 100) {
+    lastUi = now;
+    const pos = {
+      B: qBase().toFixed(1) + "°", O: q.O.toFixed(1) + "°", C: q.C.toFixed(1) + "°", MP: q.MP.toFixed(1) + "°",
+      GP: q.GP.toFixed(1) + "°", G: (w * 1000).toFixed(0) + " mm", LT: ((xLinha() - CFG.LT.xStart) * 1000).toFixed(0) + " mm",
+    };
+    UI_AXES.forEach(u => {
+      const r = rowRefs[u.ax];
+      r.enc.textContent = lerPos(u.ax).toLocaleString("pt-BR");
+      r.pos.textContent = pos[u.ax];
+      if (u.ax !== "G") r.sw.firstChild.classList.toggle("hit", !!sw(u.ax));
+    });
+    if (realMode) {
+      chipFonte.textContent = "Braço real"; chipFonte.classList.add("real");
+      chipModo.textContent = "Modo —"; chipVel.textContent = "Vel —"; chipEstado.textContent = "Espelhando posições (tecla V)";
+    } else {
+      chipFonte.textContent = "Simulador"; chipFonte.classList.remove("real");
+      chipModo.textContent = modo === SEGURAR ? "Modo segurar" : "Modo contínuo";
+      chipVel.textContent = "Vel " + velocidadePct + "%";
+      chipEstado.textContent = estado;
+    }
+  }
+  termFlush();
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(render);
+}
+
+// =====================================================================================
+//  LIGAR / REINICIAR
+// =====================================================================================
+function powerCycle() {
+  fwGen++;
+  pararTudo();
+  rxQueue.length = 0;
+  AXES.forEach(a => (off[a] = phys[a]));   // encoders comecam em zero onde o braco estiver
+  resetVars();
+  firmwareMain();
+}
+document.getElementById("btnReset").addEventListener("click", () => {
+  if (realMode) return;
+  termNote("Arduino reiniciado. Encoders em zero na posicao atual.");
+  powerCycle();
+});
+
+// =====================================================================================
+//  BRACO REAL
+//  1) Ponte serial do app do Claude (servidor MCP local "braco_serial" no PC da bancada)
+//  2) Web Serial (arquivo .html aberto no Chrome/Edge)
+// =====================================================================================
+const PONTE = "host:braco_serial";
+let realLink = null;
+let mcpApi = null;
+const mcpPronto = (window.claude && window.claude.use ? window.claude.use("mcp") : Promise.resolve(null))
+  .then(m => (mcpApi = m)).catch(() => null);
+
+const btnReal = document.getElementById("btnReal");
+const realPanel = document.getElementById("realPanel");
+const selPorta = document.getElementById("selPorta");
+const realMsg = document.getElementById("realMsg");
+const btnConectar = document.getElementById("btnConectar");
+const MSG_PADRAO = realMsg.textContent;
+function painelMsg(t, erro) { realMsg.textContent = t; realMsg.classList.toggle("err", !!erro); }
+
+const RX_POS = /POS\s+LT=(-?\d+)\s+B=(-?\d+)\s+O=(-?\d+)\s+C=(-?\d+)\s+MP=(-?\d+)\s+GP=(-?\d+)\s+G=(-?\d+)/;
+// O modelo 3D acompanha o braco real lendo as mensagens do Arduino:
+//  "POS  LT=.. B=.. ..."          -> todos os eixos
+//  "Parou: ...  ->  B=-52712"      -> o eixo que acabou de parar
+//  "Passo 3/17: B 15000 ... pos=" -> o eixo do passo do programa
+const RX_PAROU = /->\s*(LT|MP|GP|B|O|C|G)=(-?\d+)/;
+const RX_PASSO = /Passo\s+\d+\/\d+:\s*(LT|MP|GP|B|O|C|G)\s+-?\d+.*pos=(-?\d+)/;
+function parseReal(line) {
+  const m = RX_POS.exec(line);
+  if (m) { ["LT", "B", "O", "C", "MP", "GP", "G"].forEach((a, i) => { phys[a] = parseInt(m[i + 1], 10); off[a] = 0; }); return; }
+  const u = RX_PASSO.exec(line) || RX_PAROU.exec(line);
+  if (u) { phys[u[1]] = parseInt(u[2], 10); off[u[1]] = 0; }
+}
+// Ao soltar uma tecla de movimento no braco real, pede as posicoes (tecla P) para o
+// modelo pegar tambem os eixos que se movem juntos (compensacao do ombro e cotovelo).
+let timerPos = null;
+function pedirPosicoes() {
+  if (!realMode || !realLink) return;
+  clearTimeout(timerPos);
+  timerPos = setTimeout(() => { if (realMode && realLink && echoLine === null) realLink.write("p"); }, 450);
+}
+let rxAcc = "";
+function receber(s) {
+  termWrite(s); rxAcc += s;
+  let i; while ((i = rxAcc.indexOf("\n")) >= 0) { parseReal(rxAcc.slice(0, i)); rxAcc = rxAcc.slice(i + 1); }
+  if (rxAcc.length > 4000) rxAcc = rxAcc.slice(-200);
+}
+function entrarModoReal(link, nome) {
+  fwGen++; pararTudo(); rxQueue.length = 0;
+  realLink = link; realMode = true; rxAcc = "";
+  btnReal.textContent = "Desconectar braço real";
+  realPanel.hidden = true;
+  termNote(`Conectado ao braço real (${nome}). As teclas agora vão para o Arduino. Aperte V para o modelo acompanhar.`);
+}
+async function desconectarReal(motivo) {
+  const link = realLink;
+  realMode = false; realLink = null; teclaSegurada = null;
+  if (link) { try { await link.close(); } catch (_) {} }
+  btnReal.textContent = "Conectar braço real";
+  termNote(motivo || "Desconectado. Voltando ao simulador.");
+  powerCycle();
+}
+
+// ---------- ponte do app do Claude ----------
+function textoErroPonte(e) {
+  const c = e && e.code;
+  if (c === "server_not_connected") return "Ponte serial não encontrada. Abra esta página no app do Claude para desktop, no PC da bancada, com a ponte instalada (veja o LEIA-ME).";
+  if (c === "cancelled") return "A ação foi recusada na confirmação do app. Clique em Conectar braço real > Permissões da ponte e libere a ponte para esta página.";
+  if (c === "not_in_manifest" || c === "approval_required") return "O acesso à ponte serial não foi permitido para esta página. Libere em Permissões da página e tente de novo.";
+  if (c === "not_granted" || c === "capability_disabled" || c === "capability_removed") return "Esta visualização não pode usar a ponte serial. Abra a página no app do Claude para desktop.";
+  if (c === "tool_error") return "A ponte respondeu com erro: " + (e.message || "sem detalhes");
+  if (c === "rate_limited") return "O app limitou a quantidade de comandos por segundo. A página reduziu o ritmo e continua conectada.";
+  if (c === "server_unavailable") return "A ponte não respondeu a tempo. Confira se o app do Claude está aberto e tente de novo.";
+  return "Falha na ponte serial (" + (c || "erro") + "): " + ((e && e.message) || "");
+}
+const dormir = ms => new Promise(r => setTimeout(r, ms));
+// O app limita quantas chamadas a pagina faz por segundo. Por isso:
+//  - cada comando (enviar/segurar/soltar) ja devolve o texto novo do Arduino;
+//  - a leitura separada so roda quando nenhum comando trouxe texto recentemente;
+//  - a tecla segurada e renovada devagar: a repeticao rapida e feita pela ponte, no PC;
+//  - nenhuma chamada fica esperando, entao o ESPACO chega ao Arduino na hora.
+const LEITURA_MS = 1500, LEITURA_MAX_MS = 6000;
+const ehLimite = e => e && e.code === "rate_limited";
+function criarPonte(mcp) {
+  const call = async (tool, input) => (await mcp.callTool(PONTE, tool, input || {}, { cache: false })).payload;
+  let ultimoAviso = 0;
+  const link = {
+    hold: true, alive: true, pos: 0, fila: "", enviando: false, timerEnvio: null,
+    holdId: 0, holdTimer: null, holdAtivo: false, ritmo: LEITURA_MS, ultimoIo: 0, versao: 1,
+    erro(e) {
+      if (ehLimite(e)) {
+        this.ritmo = Math.min(LEITURA_MAX_MS, this.ritmo * 2);
+        if (Date.now() - ultimoAviso < 15000) return;
+        ultimoAviso = Date.now();
+      }
+      termNote(textoErroPonte(e));
+    },
+    // junta o texto novo sem repetir o que ja chegou por outra chamada
+    absorver(r) {
+      if (!r || typeof r.pos !== "number") return;
+      if (r.versao) this.versao = r.versao;
+      if (typeof r.texto === "string") {
+        const inicio = r.pos - r.texto.length;
+        if (r.pos > this.pos) {
+          receber(r.texto.slice(Math.max(0, this.pos - inicio)));
+          this.pos = r.pos;
+        }
+        this.ultimoIo = Date.now();
+      }
+      if (r.conectado === false && this.alive) {
+        this.alive = false;
+        desconectarReal("A porta serial foi fechada" + (r.erro ? " (" + r.erro + ")" : "") + ". Voltando ao simulador.");
+      }
+    },
+    async comando(tool, input) {
+      try { this.absorver(await call(tool, { ...input, desde: this.pos })); return true; }
+      catch (e) {
+        if (ehLimite(e)) {
+          // recusado antes de chegar a ponte: reenviar uma vez e seguro
+          this.erro(e);
+          await dormir(e.retryAfterMs || 800);
+          try { this.absorver(await call(tool, { ...input, desde: this.pos })); return true; } catch (e2) { this.erro(e2); return false; }
+        }
+        this.erro(e); return false;
+      }
+    },
+    write(s) {
+      if (s.includes(" ") || s.includes("\x1b")) {        // PARAR: sai na hora, sem juntar
+        this.fila = ""; clearTimeout(this.timerEnvio); this.timerEnvio = null;
+        this.holdStop(true);
+        this.comando("enviar", { texto: s });
+        return;
+      }
+      this.fila += s;
+      if (!this.timerEnvio) this.timerEnvio = setTimeout(() => { this.timerEnvio = null; this.flush(); }, 80);
+    },
+    async flush() {
+      if (this.enviando || !this.fila) return;
+      this.enviando = true;
+      const s = this.fila; this.fila = "";
+      await this.comando("enviar", { texto: s });
+      this.enviando = false;
+      if (this.fila) this.flush();
+    },
+    holdStart(tecla) {
+      this.holdStop();
+      const id = ++this.holdId;
+      this.holdAtivo = true;
+      const tick = () => this.comando("segurar", { tecla, id, duracao_ms: 2000 }).then(ok => { if (!ok && this.holdId === id) this.holdStop(); });
+      tick();
+      this.holdTimer = setInterval(tick, 1300);   // a ponte antiga limita a 1 s: o eixo pode dar pequenas pausas
+    },
+    holdStop(semAviso) {
+      if (!this.holdAtivo) return;
+      this.holdAtivo = false;
+      clearInterval(this.holdTimer); this.holdTimer = null;
+      if (!semAviso) this.comando("soltar", { id: this.holdId });
+      else call("soltar", { id: this.holdId }).catch(() => {});
+    },
+    async poll() {
+      let falhas = 0;
+      while (this.alive) {
+        await dormir(250);
+        if (!this.alive) return;
+        if (Date.now() - this.ultimoIo < this.ritmo) continue;   // um comando recente ja trouxe o texto
+        try {
+          const r = await call("ler", { desde: this.pos });
+          falhas = 0;
+          this.ritmo = Math.max(LEITURA_MS, this.ritmo * 0.85);
+          this.absorver(r);
+          this.ultimoIo = Date.now();
+        } catch (e) {
+          if (!this.alive) return;
+          this.ultimoIo = Date.now();
+          if (ehLimite(e)) { this.erro(e); continue; }
+          if (e && e.retryable && falhas++ < 3) continue;
+          this.alive = false;
+          desconectarReal(textoErroPonte(e) + " Voltando ao simulador.");
+          return;
+        }
+      }
+    },
+    async close() {
+      this.alive = false;
+      clearTimeout(this.timerEnvio);
+      this.holdStop(true);
+      try { await call("desconectar", {}); } catch (_) {}
+    },
+  };
+  return { link, call };
+}
+async function listarPortas() {
+  if (!mcpApi) return;
+  painelMsg("Procurando portas…");
+  btnConectar.disabled = true;
+  try {
+    const r = (await mcpApi.callTool(PONTE, "listar_portas", {}, { cache: false })).payload || {};
+    const portas = r.portas || [];
+    selPorta.innerHTML = "";
+    if (!portas.length) {
+      selPorta.innerHTML = `<option value="">nenhuma porta encontrada</option>`;
+      painelMsg("Nenhuma porta COM encontrada. Ligue o cabo USB do Arduino e clique em Atualizar lista.", true);
+      return;
+    }
+    portas.forEach(p => {
+      const o = document.createElement("option");
+      o.value = p.porta; o.textContent = p.descricao ? `${p.porta} (${p.descricao})` : p.porta;
+      selPorta.appendChild(o);
+    });
+    const ard = portas.find(p => /arduino|mega|ch340|usb/i.test(p.descricao || ""));
+    if (ard) selPorta.value = ard.porta;
+    btnConectar.disabled = false;
+    painelMsg(MSG_PADRAO);
+  } catch (e) {
+    selPorta.innerHTML = `<option value="">indisponível</option>`;
+    painelMsg(textoErroPonte(e), true);
+  }
+}
+async function conectarPonte() {
+  const porta = selPorta.value;
+  if (!porta || !mcpApi) return;
+  btnConectar.disabled = true;
+  const st = await pedirPermissaoPonte();
+  if (st === "denied") { painelMsg("A ponte está bloqueada para esta página. Clique em Permissões da ponte para liberar.", true); btnConectar.disabled = false; return; }
+  painelMsg("Conectando a " + porta + "…");
+  const { link, call } = criarPonte(mcpApi);
+  try {
+    const r = await call("conectar", { porta, baud: 9600 });
+    link.pos = (r && r.pos) || 0;
+  } catch (e) {
+    painelMsg(textoErroPonte(e), true);
+    btnConectar.disabled = false;
+    return;
+  }
+  btnConectar.disabled = false;
+  entrarModoReal(link, porta + " pela ponte do app");
+  link.poll();
+}
+// ---------- permissoes da ponte ----------
+const PERM_PONTE = "mcp:" + PONTE;
+const NOME_ESTADO = { granted: "liberada", prompt: "ainda não liberada (o app vai perguntar)", denied: "bloqueada", unavailable: "indisponível nesta visualização" };
+async function permissoes() { try { return await window.claude.use("permissions"); } catch (_) { return null; } }
+async function pedirPermissaoPonte() {
+  const perms = await permissoes();
+  if (!perms) return null;
+  try { return (await perms.request([PERM_PONTE]))[PERM_PONTE]; } catch (_) { return null; }
+}
+document.getElementById("btnPermissoes").addEventListener("click", async () => {
+  const perms = await permissoes();
+  if (!perms) { painelMsg("Esta visualização não tem painel de permissões. Abra a página publicada no app do Claude para desktop.", true); return; }
+  let st = await perms.state(PERM_PONTE).catch(() => "unavailable");
+  if (st === "prompt") st = await pedirPermissaoPonte() || st;
+  if (st !== "granted") {
+    try { await perms.manage(); st = await perms.state(PERM_PONTE).catch(() => st); }
+    catch (_) { painelMsg("Não consegui abrir o painel. Use o menu Permissões da página (no topo do artefato) e libere a ponte braco_serial.", true); return; }
+  }
+  painelMsg("Ponte serial: " + (NOME_ESTADO[st] || st) + ".", st !== "granted");
+  if (st === "granted") listarPortas();
+});
+document.getElementById("btnPortas").addEventListener("click", listarPortas);
+btnConectar.addEventListener("click", conectarPonte);
+document.getElementById("btnFecharPainel").addEventListener("click", () => { realPanel.hidden = true; });
+
+// ---------- Web Serial (Chrome/Edge com o arquivo local) ----------
+async function conectarWebSerial() {
+  let port;
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+  } catch (e) {
+    termNote(e && e.name === "SecurityError"
+      ? "O navegador bloqueou a porta serial nesta página. Use a ponte do app do Claude ou abra o arquivo .html no Chrome ou Edge."
+      : "Conexão cancelada ou porta indisponível (" + (e && e.message) + ").");
+    return;
+  }
+  const writer = port.writable.getWriter();
+  const enc = new TextEncoder();
+  let reader = null;
+  const link = {
+    hold: false, alive: true,
+    write(s) { writer.write(enc.encode(s)).catch(e => termNote("Falha ao enviar: " + e.message)); },
+    async close() {
+      this.alive = false;
+      try { if (reader) await reader.cancel(); } catch (_) {}
+      try { writer.releaseLock(); } catch (_) {}
+      try { await port.close(); } catch (_) {}
+    },
+  };
+  entrarModoReal(link, "porta do navegador");
+  const dec = new TextDecoder();
+  while (link.alive && port.readable) {
+    reader = port.readable.getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        receber(dec.decode(value, { stream: true }));
+      }
+    } catch (e) { if (link.alive) termNote("Leitura serial interrompida: " + e.message); break; }
+    finally { try { reader.releaseLock(); } catch (_) {} }
+  }
+}
+
+btnReal.addEventListener("click", async () => {
+  if (realMode) { desconectarReal(); return; }
+  await mcpPronto;
+  if (mcpApi) {
+    realPanel.hidden = !realPanel.hidden;
+    if (!realPanel.hidden) listarPortas();
+    return;
+  }
+  const temClaude = !!(window.claude && window.claude.use);
+  termNote(temClaude
+    ? "A ponte do app não está disponível nesta visualização. Abra a página publicada da Bancada Virtual no app do Claude para desktop (não o arquivo baixado)."
+    : "Arquivo aberto fora do Claude: usando a porta serial do navegador.");
+  if (temClaude) return;
+  if ("serial" in navigator) { conectarWebSerial(); return; }
+  termNote("Para ligar o braço real, abra esta página no app do Claude para desktop com a ponte serial, ou abra o arquivo .html no Chrome ou Edge.");
+});
+
+// =====================================================================================
+//  JARVIS - controle por voz (demonstracao). Cada comando vira uma linha "#" do firmware,
+//  enviada uma por vez: a proxima so sai quando o Arduino responde PRONTO.
+// =====================================================================================
+const $j = id => document.getElementById(id);
+const jvMic = $j("jvMic"), jvEstadoEl = $j("jvEstado"), jvOuvidoEl = $j("jvOuvido"), jvRespEl = $j("jvResp");
+const jvAvisoEl = $j("jvAviso"), jvPosesEl = $j("jvPoses"), jvTexto = $j("jvTexto");
+const jvWake = $j("jvWake"), jvFala = $j("jvFala"), jvIA = $j("jvIA");
+function jvEstado(t) { jvEstadoEl.textContent = t; }
+
+// ---- voz de resposta ----
+let jvVoz = null;
+function escolherVoz() {
+  try {
+    const vs = speechSynthesis.getVoices();
+    jvVoz = vs.find(v => /pt[-_]BR/i.test(v.lang) && /male|daniel|ricardo|antonio/i.test(v.name)) ||
+            vs.find(v => /pt[-_]BR/i.test(v.lang)) || vs.find(v => /^pt/i.test(v.lang)) || null;
+  } catch (_) {}
+}
+try { escolherVoz(); speechSynthesis.onvoiceschanged = escolherVoz; } catch (_) {}
+function falar(t) {
+  jvRespEl.textContent = t;
+  if (!jvFala.checked) return;
+  try {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = "pt-BR"; if (jvVoz) u.voice = jvVoz; u.rate = 1.05; u.pitch = 0.85;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (_) {}
+}
+
+// ---- espera respostas do firmware lendo o terminal ----
+let jvBuf = "", jvEsperas = [];
+const termWriteOriginal = termWrite;
+termWrite = function (s) {
+  termWriteOriginal(s);
+  jvBuf += s;
+  if (jvBuf.length > 40000) { const corte = jvBuf.length - 8000; jvBuf = jvBuf.slice(corte); jvEsperas.forEach(w => (w.inicio = Math.max(0, w.inicio - corte))); }
+  for (const w of [...jvEsperas]) {
+    const m = w.re.exec(jvBuf.slice(w.inicio));
+    if (m) { jvEsperas = jvEsperas.filter(x => x !== w); clearTimeout(w.t); w.ok(m); }
+  }
+};
+class Interrompido extends Error {}
+function esperarResposta(re, ms) {
+  let w;
+  const p = new Promise((ok, falha) => {
+    w = { re, inicio: jvBuf.length, ok, falha };
+    w.t = setTimeout(() => { jvEsperas = jvEsperas.filter(x => x !== w); falha(new Error("sem resposta")); }, ms);
+    jvEsperas.push(w);
+  });
+  return p;
+}
+function cancelarEsperas() {
+  for (const w of jvEsperas) { clearTimeout(w.t); w.falha(new Interrompido()); }
+  jvEsperas = [];
+}
+let jvAbortado = false;
+async function linhaFirmware(linha, re = /PRONTO/, ms = 45000) {
+  if (jvAbortado) throw new Interrompido();
+  const espera = esperarResposta(re, ms);
+  sendBytes([...linha, "\r"]);
+  return espera;
+}
+
+// ---- posicoes ----
+const EIXOS_J = ["B", "O", "C", "MP", "GP"];
+async function lerPosicoes() {
+  if (realMode) await linhaFirmware("#POS", /POS\s+LT=[^\n]*\n/, 6000);
+  const p = {}; [...EIXOS_J, "G", "LT"].forEach(a => (p[a] = lerPos(a))); return p;
+}
+// contagens por grau (aproximado, igual ao modelo 3D)
+const POR_GRAU = {
+  B: (CFG.B.pMax - CFG.B.pMin) / (CFG.B.qMax - CFG.B.qMin),
+  O: 1 / Math.abs(CFG.DPC.O), C: 1 / Math.abs(CFG.DPC.C), MP: 1 / Math.abs(CFG.DPC.MP), GP: 1 / Math.abs(CFG.DPC.GP),
+};
+const NOME_EIXO = { B: "base", O: "ombro", C: "cotovelo", MP: "punho", GP: "giro do punho" };
+async function moverRelativo(ax, graus) {
+  const p = await lerPosicoes();
+  let alvo = Math.round(p[ax] + graus * POR_GRAU[ax]);
+  if (ax === "B") alvo = constrain(alvo, LIM.B[0], LIM.B[1]);
+  await linhaFirmware(`#${ax} ${alvo}`);
+}
+
+// posicoes gravadas (neste navegador). Os exemplos so servem para o simulador.
+const CHAVE_POSES = "miguel5250-poses-v2";   // v2: posicoes a partir de 0 (15/10)
+const POSES_EXEMPLO = {
+  "acima peca":    { B: 38328, O: 14073, C: -14380, MP: 7306, GP: -13778 },
+  "peca":          { B: 38328, O: 16255, C: -14370, MP: 6928, GP: -13399 },
+  "acima destino": { B: 51240, O: 15273, C: -12967, MP: 6900, GP: -13362 },
+  "destino":       { B: 51240, O: 17455, C: -12182, MP: 6413, GP: -12868 },
+};
+let poses = {};
+try { poses = JSON.parse(localStorage.getItem(CHAVE_POSES) || "null") || { ...POSES_EXEMPLO }; } catch (_) { poses = { ...POSES_EXEMPLO }; }
+function salvarPoses() { try { localStorage.setItem(CHAVE_POSES, JSON.stringify(poses)); } catch (_) {} mostrarPoses(); }
+function mostrarPoses() {
+  jvPosesEl.innerHTML = "";
+  const nomes = Object.keys(poses);
+  if (!nomes.length) { jvPosesEl.innerHTML = `<span class="jv-aviso">Nenhuma posição gravada. Diga "grave a posição peça".</span>`; return; }
+  nomes.forEach(n => { const s = document.createElement("span"); s.className = "jv-pose"; s.textContent = n; s.title = JSON.stringify(poses[n]); jvPosesEl.appendChild(s); });
+}
+async function irParaPose(nome) {
+  const alvo = poses[nome];
+  // Ordem da base para a ponta (ver o manual). O punho e diferencial: MP e GP sao
+  // repetidos uma vez para acertar inclinacao e giro juntos.
+  for (const ax of ["B", "O", "C", "MP", "GP", "MP"]) {
+    if (typeof alvo[ax] !== "number") continue;
+    await linhaFirmware(`#${ax} ${alvo[ax]}`);
+  }
+}
+
+// ---- interpretacao das frases ----
+const sem = t => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9%\s,.-]/g, " ").replace(/\s+/g, " ").trim();
+const NUM_PALAVRAS = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, cinco: 5, dez: 10, quinze: 15, vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60, setenta: 70, oitenta: 80, noventa: 90, cem: 100, cento: 100 };
+function numero(t) {
+  const d = /(-?\d+(?:[.,]\d+)?)/.exec(t);
+  if (d) return parseFloat(d[1].replace(",", "."));
+  let total = 0, achou = false;
+  for (const w of t.split(" ")) if (w in NUM_PALAVRAS) { total += NUM_PALAVRAS[w]; achou = true; }
+  return achou ? total : null;
+}
+const nomePose = t => sem(t).replace(/\b(a|o|as|os|da|do|de|na|no|em|chamada|chamado|nome|posicao|ponto)\b/g, " ").replace(/\s+/g, " ").trim();
+
+function interpretarTrecho(t) {
+  let m0;
+  if (/\b(pare|parar|para tudo|stop|emergencia)\b/.test(t)) return [{ tipo: "parar" }];
+  if (/(quem e voce|se apresente|apresente se|apresentar)/.test(t)) return [{ tipo: "falar", texto: "Eu sou o Miguel, o braço robótico Lab-Volt 5250. Fale um comando e eu executo." }];
+  if (/obrigad/.test(t)) return [{ tipo: "falar", texto: "Disponha." }];
+  if ((m0 = /\b(bom dia|boa tarde|boa noite)\b/.exec(t))) {
+    const sauda = m0[1][0].toUpperCase() + m0[1].slice(1);
+    return [{ tipo: "falar", texto: `${sauda}! Eu sou o Miguel. Vou cumprimentar vocês.` }, { tipo: "acenar", silencioso: true }];
+  }
+  let m;
+  if ((m = /\b(grav[ae]r?|memoriz[ae]r?|salv[ae]r?)\b.*\b(posicao|ponto)\b(.*)/.exec(t))) return [{ tipo: "gravar", nome: nomePose(m[3]) }];
+  if ((m = /\b(apag[ae]r?|esquec[ae]r?|remov[ae]r?)\b.*\b(posicao|ponto)\b(.*)/.exec(t))) return [{ tipo: "apagar", nome: nomePose(m[3]) }];
+  if ((m = /\b(va|vai|ir|mova|leve|volte|siga)\b.*\b(posicao|ponto)\b(.*)/.exec(t))) {
+    const n = nomePose(m[3]);
+    if (/^(inicial|zero|casa|inicio)$/.test(n)) return [{ tipo: "zerar" }];
+    return [{ tipo: "pose", nome: n }];
+  }
+  if (/(posicao inicial|\bzer[ae]r?\b|zeramento|volt[ae]r? (para |pro |ao )?(o )?(zero|inicio|casa))/.test(t)) return [{ tipo: "zerar" }];
+  if (/\b(peg(ue|ar|a)|apanh[ae]r?)\b.*\bpeca\b|demonstracao|\bshow\b/.test(t)) return [{ tipo: "pegar" }];
+  if (/\b(acen[ae]r?|tchau|ola|oi|cumpriment)/.test(t)) return [{ tipo: "acenar" }];
+  if (/(onde (voce )?esta|sua posicao|quais as posicoes|status)/.test(t)) return [{ tipo: "status" }];
+  if (/garra/.test(t) || /\b(solt[ae]r?|segur[ae]r?|agarr[ae]r?)\b/.test(t)) {
+    if (/\b(abr|solt)/.test(t)) return [{ tipo: "garra", abrir: true }];
+    if (/\b(fech|segur|agarr|aperte)/.test(t)) return [{ tipo: "garra", abrir: false }];
+  }
+  if (/velocidade|devagar|rapido|lento/.test(t)) {
+    const n = numero(t);
+    const v = n != null ? n : /(lent|devagar|baixa)/.test(t) ? 60 : /(rapid|alta|maxim)/.test(t) ? 150 : 100;
+    return [{ tipo: "vel", valor: v }];
+  }
+  const n = numero(t);
+  if (/\bbase\b|\bgir[ae]r?\b.*\b(esquerda|direita)\b/.test(t) && !/punho/.test(t)) {
+    const g = n ?? 30, s = /(direita|horario)/.test(t) && !/anti/.test(t) ? -1 : 1;
+    return [{ tipo: "rel", ax: "B", graus: s * g }];
+  }
+  if (/ombro|braco/.test(t)) {
+    const s = /(tras|levant|sub|cima|recolh)/.test(t) ? -1 : 1;
+    return [{ tipo: "rel", ax: "O", graus: s * (n ?? 15) }];
+  }
+  if (/cotovelo|antebraco/.test(t)) {
+    const s = /(desc|desca|abaix|baix)/.test(t) ? -1 : 1;
+    return [{ tipo: "rel", ax: "C", graus: s * (n ?? 15) }];
+  }
+  if (/punho|pulso/.test(t)) {
+    if (/\bgir/.test(t)) return [{ tipo: "rel", ax: "GP", graus: (/anti/.test(t) ? -1 : 1) * (n ?? 45) }];
+    const s = /(desc|desca|abaix|baix)/.test(t) ? 1 : -1;
+    return [{ tipo: "rel", ax: "MP", graus: s * (n ?? 20) }];
+  }
+  return null;
+}
+function interpretar(frase) {
+  const t = sem(frase).replace(/\bmiguel\b[,.]?/g, " ").trim();
+  if (!t) return [];
+  const partes = t.split(/\s*(?:,|\be depois\b|\bdepois\b|\bem seguida\b|\be entao\b|\be\s+(?=(?:abr|fech|gir|sub|desc|suba|desca|va|volte|grave|pegue|acene)))\s*/).filter(Boolean);
+  const acoes = [];
+  for (const p of partes) { const a = interpretarTrecho(p); if (!a) return null; acoes.push(...a); }
+  return acoes;
+}
+
+// ---- Claude para frases livres (so na pagina publicada) ----
+let jvSample = null;
+(window.claude && window.claude.use ? window.claude.use("sample") : Promise.resolve(null)).then(s => (jvSample = s)).catch(() => {});
+const ACOES_VALIDAS = new Set(["garra", "rel", "pose", "gravar", "apagar", "zerar", "pegar", "acenar", "vel", "status", "falar", "parar"]);
+function validar(a) {
+  if (!a || !ACOES_VALIDAS.has(a.tipo)) return null;
+  if (a.tipo === "rel") { if (!["B", "O", "C", "MP", "GP"].includes(a.ax) || typeof a.graus !== "number") return null; a.graus = constrain(a.graus, -120, 120); }
+  if (a.tipo === "vel") a.valor = constrain(Number(a.valor) || 100, 20, 150);
+  if (["pose", "gravar", "apagar"].includes(a.tipo)) { if (typeof a.nome !== "string") return null; a.nome = nomePose(a.nome); }
+  if (a.tipo === "garra") a.abrir = !!a.abrir;
+  if (a.tipo === "falar") a.texto = String(a.texto || "").slice(0, 300);
+  return a;
+}
+async function perguntarClaude(frase) {
+  const prompt = `Você é o Miguel, a voz de um braço robótico Lab-Volt 5250 numa feira escolar.
+Converta o pedido do visitante em ações. Responda SÓ com JSON: {"resposta": "frase curta e simpática em português do Brasil", "acoes": [...]}.
+Ações permitidas (use só estas):
+{"tipo":"garra","abrir":true|false}
+{"tipo":"rel","ax":"B"|"O"|"C"|"MP"|"GP","graus":número}   // B base (+ = anti-horário/esquerda), O ombro (+ = para frente), C cotovelo (+ = sobe), MP punho (+ = desce), GP giro do punho
+{"tipo":"pose","nome":"..."}  // posições gravadas: ${Object.keys(poses).join(", ") || "nenhuma"}
+{"tipo":"zerar"} {"tipo":"pegar"} {"tipo":"acenar"} {"tipo":"status"} {"tipo":"vel","valor":20-150} {"tipo":"falar","texto":"..."}
+Movimentos de no máximo 60 graus por ação. Se o pedido não for sobre o braço, ou for perigoso, devolva "acoes": [] e explique na resposta.
+Pedido: ${JSON.stringify(frase)}`;
+  const r = await jvSample.json(prompt, { modelTier: "quick" });
+  const acoes = (Array.isArray(r && r.acoes) ? r.acoes : []).map(validar).filter(Boolean).slice(0, 12);
+  return { resposta: typeof r?.resposta === "string" ? r.resposta.slice(0, 300) : "", acoes };
+}
+
+// ---- execucao ----
+let jvOcupado = false;
+async function executarAcao(a) {
+  switch (a.tipo) {
+    case "parar": return;
+    case "falar": falar(a.texto); return;
+    case "garra": falar(a.abrir ? "Abrindo a garra." : "Fechando a garra."); await linhaFirmware(`#G ${a.abrir ? 0 : 15000}`); return;
+    case "rel":
+      falar(`Movendo ${NOME_EIXO[a.ax]} ${Math.abs(Math.round(a.graus))} graus.`);
+      await moverRelativo(a.ax, a.graus); return;
+    case "vel": falar(`Velocidade ${Math.round(a.valor)} por cento.`); await linhaFirmware(`#VEL ${Math.round(a.valor)}`); return;
+    case "zerar": falar("Voltando à posição inicial."); await linhaFirmware("#ZERAR", /PRONTO/, 90000); return;
+    case "gravar": {
+      if (!a.nome) { falar("Diga o nome da posição. Por exemplo: grave a posição peça."); return; }
+      const p = await lerPosicoes();
+      poses[a.nome] = { B: p.B, O: p.O, C: p.C, MP: p.MP, GP: p.GP }; salvarPoses();
+      falar(`Posição ${a.nome} gravada.`); return;
+    }
+    case "apagar":
+      if (poses[a.nome]) { delete poses[a.nome]; salvarPoses(); falar(`Posição ${a.nome} apagada.`); }
+      else falar(`Não encontrei a posição ${a.nome}.`);
+      return;
+    case "pose":
+      if (!poses[a.nome]) { falar(`Não conheço a posição ${a.nome}. Posições gravadas: ${Object.keys(poses).join(", ") || "nenhuma"}.`); return; }
+      falar(`Indo para a posição ${a.nome}.`); await irParaPose(a.nome); return;
+    case "pegar": {
+      const falta = ["acima peca", "peca", "acima destino", "destino"].filter(n => !poses[n]);
+      if (falta.length) { falar(`Para pegar a peça, grave antes as posições: ${falta.join(", ")}.`); return; }
+      falar("Iniciando a demonstração. Vou pegar a peça.");
+      await linhaFirmware("#G 0");
+      await irParaPose("acima peca"); await irParaPose("peca");
+      falar("Peça encontrada. Segurando."); await linhaFirmware("#G 15000");
+      await irParaPose("acima peca"); await irParaPose("acima destino");
+      falar("Levando ao destino."); await irParaPose("destino");
+      await linhaFirmware("#G 0"); await irParaPose("acima destino");
+      falar("Demonstração concluída."); return;
+    }
+    case "acenar":
+      if (!a.silencioso) falar("Olá! Seja bem-vindo.");
+      for (const g of [20, -40, 40, -20]) await moverRelativo("B", g);
+      return;
+    case "status": {
+      const p = await lerPosicoes(); const q = toQ(phys);
+      falar(`Base a ${Math.round(qBase())} graus, ombro a ${Math.round(q.O)}, cotovelo a ${Math.round(q.C)}, punho a ${Math.round(q.MP)}. Garra ${p.G > 3000 ? "fechada" : "aberta"}.`);
+      return;
+    }
+  }
+}
+async function comando(frase, origem) {
+  frase = frase.trim();
+  if (!frase) return;
+  jvOuvidoEl.textContent = `"${frase}"`;
+  const t = sem(frase);
+  if (origem === "voz" && jvWake.checked && !/\bmiguel\b/.test(t)) return;   // nao foi chamado
+  if (/\b(pare|parar|para tudo|stop|emergencia)\b/.test(t)) { pararMiguel(); return; }
+  if (jvOcupado) { falar("Um momento, ainda estou executando. Diga pare para interromper."); return; }
+  let acoes = interpretar(frase), resposta = "";
+  if (acoes === null) {
+    if (jvIA.checked && jvSample) {
+      jvEstado("Pensando…");
+      try { const r = await perguntarClaude(frase); acoes = r.acoes; resposta = r.resposta; }
+      catch (e) { acoes = null; if (e && e.code === "not_granted") jvIA.checked = false; }
+    }
+    if (!acoes) { falar("Não entendi. Abra a lista de comandos para ver o que eu sei fazer."); jvEstado(jvOuvindo ? "Ouvindo" : "Pronto"); return; }
+  }
+  if (resposta) falar(resposta);
+  if (!acoes.length) { jvEstado(jvOuvindo ? "Ouvindo" : "Pronto"); return; }
+  jvOcupado = true; jvAbortado = false; jvEstado("Executando…");
+  try { for (const a of acoes) await executarAcao(a); }
+  catch (e) {
+    if (e instanceof Interrompido) falar("Movimento interrompido.");
+    else falar("O braço não respondeu a tempo. Confira se ele terminou o zeramento e tente de novo.");
+  } finally { jvOcupado = false; jvEstado(jvOuvindo ? "Ouvindo" : "Pronto"); }
+}
+function pararMiguel() {
+  jvAbortado = true;
+  sendBytes([" "]);
+  cancelarEsperas();
+  falar("Parado.");
+}
+$j("jvParar").addEventListener("click", pararMiguel);
+$j("jvForm").addEventListener("submit", e => { e.preventDefault(); const t = jvTexto.value; jvTexto.value = ""; comando(t, "texto"); });
+
+// ---- microfone ----
+const Reconhecedor = window.SpeechRecognition || window.webkitSpeechRecognition;
+let jvRec = null, jvOuvindo = false;
+function avisoMic(t) { jvAvisoEl.textContent = t; }
+if (location.protocol === "file:") {
+  setTimeout(() => avisoMic("Aberto direto do arquivo, o Chrome pede o microfone a toda hora. Use o atalho abrir_miguel.bat (endereço localhost) ou o link do GitHub Pages: lá a permissão fica salva."), 0);
+}
+if (!Reconhecedor) {
+  jvMic.disabled = true;
+  avisoMic("Este navegador não tem reconhecimento de voz. Para a feira, abra o arquivo miguel-5250.html no Chrome ou Edge. Aqui, digite os comandos.");
+} else {
+  jvRec = new Reconhecedor();
+  jvRec.lang = "pt-BR"; jvRec.continuous = true; jvRec.interimResults = true;
+  jvRec.onresult = ev => {
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const r = ev.results[i], txt = r[0].transcript;
+      if (r.isFinal) comando(txt, "voz");
+      else {
+        jvOuvidoEl.textContent = `"${txt.trim()}…"`;
+        if (/\b(pare|parar|stop)\b/i.test(txt) && jvOcupado) pararMiguel();   // parar sem esperar o fim da frase
+      }
+    }
+  };
+  jvRec.onerror = ev => {
+    if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+      jvOuvindo = false; atualizarMic();
+      avisoMic("O microfone foi bloqueado aqui. Dentro do Claude a página não acessa o microfone: abra o arquivo miguel-5250.html no Chrome ou Edge e permita o microfone.");
+    } else if (ev.error === "network") avisoMic("O reconhecimento de voz do Chrome precisa de internet.");
+  };
+  // O Chrome encerra a escuta depois de um silencio. Reinicia com uma pausa curta; em
+  // arquivo aberto do disco (file://) o Chrome pede o microfone de novo a cada reinicio.
+  jvRec.onend = () => { if (jvOuvindo) setTimeout(() => { if (jvOuvindo) { try { jvRec.start(); } catch (_) {} } }, 250); };
+}
+function atualizarMic() {
+  jvMic.setAttribute("aria-pressed", jvOuvindo ? "true" : "false");
+  jvMic.setAttribute("aria-label", jvOuvindo ? "Desligar o microfone" : "Ligar o microfone");
+  if (!jvOcupado) jvEstado(jvOuvindo ? "Ouvindo" : "Pronto");
+}
+let jvStream = null;   // manter o microfone aberto evita novos pedidos de permissao enquanto a pagina estiver aberta
+jvMic.addEventListener("click", async () => {
+  if (!jvRec) return;
+  jvOuvindo = !jvOuvindo;
+  if (jvOuvindo && !jvStream && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try { jvStream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (_) {}
+  }
+  try { if (jvOuvindo) jvRec.start(); else jvRec.stop(); } catch (_) {}
+  atualizarMic();
+  if (jvOuvindo) { avisoMic(""); falar(jvWake.checked ? "Estou ouvindo. Comece os comandos dizendo Miguel." : "Estou ouvindo."); }
+});
+mostrarPoses();
+if (!realMode) avisoMic(jvAvisoEl.textContent || "As posições de exemplo servem para o simulador. No braço real, grave as suas com \"grave a posição …\".");
+
+// partida
+poseInicial();
+powerCycle();
+scheduler();
+requestAnimationFrame(render);
+</script>

@@ -1,0 +1,1727 @@
+<title>Treino Virtual 5250</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: bancada de laboratório — palco 3D grande à esquerda, terminal serial e programa à direita, painel de jog com leituras de encoder abaixo do palco. */
+:root {
+  --bg: #e7ebe9;
+  --panel: #f6f8f7;
+  --ink: #1c2427;
+  --muted: #59666a;
+  --line: #ccd3d1;
+  --accent: #d38c0b;
+  --accent-ink: #1d1606;
+  --steel: #2c5d78;
+  --stop: #c23a2b;
+  --stop-ink: #ffffff;
+  --ok: #2b7a4c;
+  --stage: #dce2e0;
+  --floor: #c6cecb;
+  --grid: #a7b1ae;
+  --key: #ffffff;
+  --term-bg: #0b0e0f;
+  --term-ink: #c6d2ce;
+  --term-dim: #6f7d79;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111517; --panel: #192023; --ink: #dae1df; --muted: #8e999c; --line: #2b3337;
+    --accent: #efab2c; --accent-ink: #1d1606; --steel: #80b3d0; --stop: #df5845; --stop-ink: #ffffff;
+    --ok: #5cc28a; --stage: #1a2023; --floor: #252c2f; --grid: #3a4448; --key: #222a2e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111517; --panel: #192023; --ink: #dae1df; --muted: #8e999c; --line: #2b3337;
+  --accent: #efab2c; --accent-ink: #1d1606; --steel: #80b3d0; --stop: #df5845; --stop-ink: #ffffff;
+  --ok: #5cc28a; --stage: #1a2023; --floor: #252c2f; --grid: #3a4448; --key: #222a2e;
+  color-scheme: dark;
+}
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: var(--body); font-size: 15px; line-height: 1.45; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+
+.app {
+  max-width: 1440px; margin: 0 auto;
+  padding-inline: 16px; padding-block: 16px 40px;
+  display: grid; gap: 16px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  grid-template-areas: "head head" "stage side" "pad side" ". side";
+  grid-template-rows: auto auto auto 1fr;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "stage" "pad" "side"; grid-template-rows: none; }
+}
+
+/* Cabeçalho */
+.head { grid-area: head; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
+.eyebrow { font-family: var(--display); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 4vw, 40px); line-height: 1; margin: 2px 0 0; letter-spacing: .01em; text-wrap: balance; }
+.head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 7px 12px; cursor: pointer; font-weight: 500; font-size: 14px; }
+.btn:hover { border-color: var(--muted); }
+.btn:focus-visible, .jog:focus-visible, .act:focus-visible, textarea:focus-visible, pre:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn.stopbtn { background: var(--stop); border-color: var(--stop); color: var(--stop-ink); font-weight: 600; }
+.ex { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 8px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.ex-top { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.ex-top h2 { flex: none; }
+.ex select { font: inherit; font-weight: 600; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); min-width: 0; max-width: 100%; flex: 1 1 220px; }
+.ex-nivel { font-family: var(--display); font-weight: 600; letter-spacing: .07em; text-transform: uppercase; font-size: 12.5px; color: var(--steel); }
+.ex-resumo { margin: 0; font-size: 14.5px; max-width: 65ch; text-wrap: pretty; }
+.ex-metas { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.ex-metas li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: start; font-size: 14px; }
+.ex-metas .ck { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--muted); margin-top: 2px; position: relative; }
+.ex-metas li.ok .ck { background: var(--ok); border-color: var(--ok); }
+.ex-metas li.ok .ck::after { content: ""; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.ex-metas li.ok .txt { color: var(--muted); }
+.ex-metas .pg { font-family: var(--mono); font-size: 12.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ex-stats { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); }
+.ex-stats b { font-family: var(--mono); color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+.ex-done { border-left: 4px solid var(--ok); background: var(--bg); padding: 8px 10px; border-radius: 4px; font-size: 14px; }
+.ex-done b { color: var(--ok); }
+.ex-done .stars { color: var(--accent); letter-spacing: .1em; margin-left: 4px; }
+details.ex-dica summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+details.ex-dica > div { font-size: 13.5px; color: var(--muted); margin-top: 6px; max-width: 65ch; }
+details.ex-dica ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+details.ex-dica code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+
+/* Palco 3D */
+.stage { grid-area: stage; position: relative; aspect-ratio: 16 / 10; max-width: 100%; border-radius: 8px; overflow: hidden; background: var(--stage); border: 1px solid var(--line); min-height: 280px; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.chips { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+.chip { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; background: var(--panel); border: 1px solid var(--line); padding: 3px 8px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.chip.src { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip.src.real { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.chip.state { text-transform: none; letter-spacing: .02em; font-family: var(--mono); font-weight: 500; font-size: 12px; }
+.warn { position: absolute; top: 44px; left: 10px; background: var(--stop); color: var(--stop-ink); font-family: var(--display); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; font-size: 14px; pointer-events: none; }
+.task { position: absolute; left: 10px; bottom: 10px; right: 10px; max-width: 480px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13.5px; pointer-events: none; }
+.task b { font-family: var(--display); letter-spacing: .06em; text-transform: uppercase; font-size: 13px; margin-right: 6px; }
+.task .done { color: var(--ok); font-weight: 600; }
+.hint { position: absolute; right: 10px; bottom: 10px; font-size: 12px; color: var(--muted); pointer-events: none; }
+@media (max-width: 640px) { .hint { display: none; } }
+
+/* Painel de jog */
+.pad { grid-area: pad; display: grid; gap: 12px; }
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+table.axes { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 520px; }
+.axes th { font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; font-size: 12.5px; color: var(--muted); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.axes td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.axes tr:last-child td { border-bottom: 0; }
+.axes td.name { font-weight: 600; white-space: nowrap; }
+.axes td.name small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+.axes td.num { font-family: var(--mono); font-size: 13.5px; text-align: right; white-space: nowrap; }
+.axes th.r { text-align: right; }
+.keys { display: flex; gap: 6px; }
+.jog { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-bottom-width: 3px; background: var(--key); border-radius: 6px; padding: 4px 9px 3px; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; font-size: 13px; white-space: nowrap; }
+.jog kbd { font-family: var(--mono); font-weight: 500; font-size: 13px; }
+.jog.on, .jog:active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); transform: translateY(1px); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--muted); vertical-align: middle; }
+.sw.hit { background: var(--accent); border-color: var(--accent); }
+.na { color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.act { display: grid; justify-items: start; gap: 0; border: 1px solid var(--line); border-bottom-width: 3px; background: var(--panel); border-radius: 6px; padding: 5px 11px 4px; cursor: pointer; min-width: 74px; }
+.act span { font-weight: 600; font-size: 14px; line-height: 1.2; }
+.act kbd { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.act.stop { background: var(--stop); border-color: var(--stop); color: var(--stop-ink); min-width: 130px; }
+.act.stop kbd { color: var(--stop-ink); opacity: .85; }
+.act:active { transform: translateY(1px); }
+
+/* Lateral: terminal e programa */
+.side { grid-area: side; display: grid; gap: 16px; min-width: 0; }
+.term { border-radius: 8px; overflow: hidden; border: 1px solid #000; background: var(--term-bg); }
+.term-bar { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 10px; background: #1b2124; color: #9fb0ab; font-family: var(--mono); font-size: 12px; }
+.term-bar #echo { color: #f0b43a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#term { margin: 0; height: 340px; overflow: auto; padding: 10px 12px; color: var(--term-ink); background: var(--term-bg); font-family: var(--mono); font-size: 12.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.term-foot { padding: 6px 10px; color: var(--term-dim); font-size: 12px; border-top: 1px solid #1f2629; background: var(--term-bg); }
+.prog { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .02em; margin: 0; }
+.prog p { margin: 0; color: var(--muted); font-size: 13.5px; max-width: 65ch; }
+textarea#prog { width: 100%; min-height: 260px; resize: vertical; font-family: var(--mono); font-size: 13px; line-height: 1.45; padding: 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+details.about { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+details.about summary { cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 16px; letter-spacing: .03em; }
+details.about ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; color: var(--muted); max-width: 65ch; }
+details.about code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .jog, .act { transition: none; } }
+</style>
+
+<div class="app">
+  <header class="head">
+    <div>
+      <div class="eyebrow">Lab-Volt 5250 · exercícios no simulador</div>
+      <h1>Treino Virtual 5250</h1>
+    </div>
+    <div class="head-actions">
+      <button class="btn" type="button" id="btnReset" title="Desliga e liga o Arduino: os encoders voltam a zero onde o braço estiver e o zeramento roda de novo">Reiniciar Arduino</button>
+      <button class="btn primary" type="button" id="btnCubo">Reiniciar exercício</button>
+    </div>
+  </header>
+
+  <section class="stage" id="stage" aria-label="Modelo 3D do braço">
+    <canvas id="cv"></canvas>
+    <div class="chips">
+      <span class="chip src" id="chipFonte">Simulador</span>
+      <span class="chip" id="chipModo">Modo segurar</span>
+      <span class="chip" id="chipVel">Vel 100%</span>
+      <span class="chip state" id="chipEstado">Ligando…</span>
+      <span class="chip" id="chipEsteira" hidden>Esteira ligada</span>
+    </div>
+    <div class="warn" id="warn" hidden>Colisão com a mesa</div>
+    <div class="task" aria-live="polite"><b id="hudNum">Exercício</b><span id="hudTxt"></span></div>
+    <div class="hint">Arraste para girar a vista · role para aproximar</div>
+  </section>
+
+  <section class="pad" aria-label="Controle manual">
+    <div class="table-wrap">
+      <table class="axes">
+        <thead><tr><th>Eixo</th><th>Teclas</th><th class="r">Encoder</th><th class="r">Posição</th><th>Fim de curso</th></tr></thead>
+        <tbody id="axesBody"></tbody>
+      </table>
+    </div>
+    <div class="actions" id="actions"></div>
+  </section>
+
+  <aside class="side">
+    <section class="ex" aria-label="Exercícios">
+      <div class="ex-top">
+        <h2>Exercícios</h2>
+        <select id="exSel" aria-label="Escolha o exercício"></select>
+      </div>
+      <div class="ex-nivel" id="exNivel"></div>
+      <p class="ex-resumo" id="exResumo"></p>
+      <ol class="ex-metas" id="exMetas" aria-label="Metas"></ol>
+      <div class="ex-stats"><span>Tempo <b id="exTempo">0:00</b></span><span>Colisões <b id="exCol">0</b></span><span>Melhor <b id="exMelhor">—</b></span></div>
+      <div class="ex-done" id="exOk" hidden></div>
+      <details class="ex-dica"><summary>Dicas</summary><div id="exDica"></div></details>
+      <div class="row"><button class="btn" type="button" id="exModelo">Carregar modelo de programa</button></div>
+    </section>
+
+    <div class="term">
+      <div class="term-bar"><span>Serial · 9600 baud</span><span id="echo"></span></div>
+      <pre id="term" tabindex="0" aria-live="off"></pre>
+      <div class="term-foot">O teclado do PC vai direto para a serial, como no PuTTY. Segure a tecla para o eixo andar.</div>
+    </div>
+
+    <div class="prog">
+      <h2>Programa</h2>
+      <p>Mesmo texto que você cola no PuTTY. Clique na linha onde o ponto deve entrar, leve o braço até lá com o teclado e clique em <b>Inserir ponto atual</b>. <b>Enviar ao braço</b> grava e executa o programa no simulador.</p>
+      <textarea id="prog" spellcheck="false" aria-label="Texto do programa"></textarea>
+      <div class="row">
+        <button class="btn primary" type="button" id="btnEnviar">Enviar ao braço</button>
+        <button class="btn" type="button" id="btnExecutar" title="Executa o programa gravado no Arduino, repetindo o número de vezes da linha #EXECUTAR do quadro">▶ Executar</button>
+        <button class="btn stopbtn" type="button" id="btnPararProg" title="Para tudo (mesmo que a tecla ESPAÇO)">■ Parar</button>
+        <button class="btn" type="button" id="btnPonto">Inserir ponto atual</button>
+        <button class="btn" type="button" id="btnCopiar">Copiar para o PuTTY</button>
+        <button class="btn" type="button" id="btnLimpar" title="Apaga o texto do quadro e começa um programa novo">Limpar programa</button>
+      </div>
+    </div>
+
+    <details class="about">
+      <summary>Sobre o modelo</summary>
+      <ul>
+        <li>O simulador roda uma cópia do <code>BracoTeclado.ino</code> em JavaScript: mesmas teclas, mesmos comandos <code>#</code>, mesmos limites de encoder e as mesmas compensações entre motores.</li>
+        <li>Ao ligar, os encoders começam em zero onde o braço estiver, por isso o zeramento roda primeiro. A garra não tem fim de curso: abra com <code>H</code> e aperte <code>X</code> antes de rodar programas.</li>
+        <li>O punho é diferencial: mover o punho ou o cotovelo também gira os motores MP e GP, então as contagens desses eixos mudam juntas. Por isso a ordem das linhas no programa importa.</li>
+        <li>Ângulos, medidas e velocidades são aproximados. Para calibrar, meça contagens por grau no braço real e ajuste o objeto <code>CFG</code> no início do script.</li>
+        <li>Esta página só simula: não conecta ao braço real. Um programa que funciona aqui pode ser copiado para o PuTTY, mas os pontos precisam ser conferidos no braço real, porque as medidas do modelo são aproximadas.</li>
+        <li>Seu progresso (exercícios concluídos e melhores tempos) fica guardado só neste navegador.</li>
+      </ul>
+    </details>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+// =====================================================================================
+//  CALIBRACAO DO MODELO (aproximada) - ajuste medindo o braco real
+// =====================================================================================
+const CFG = {
+  // contagens de encoder por segundo para cada unidade de PWM
+  K:    { LT: 35, B: 44, O: 12.86, C: 27.8, MP: 13.35, GP: 24.4, G: 65 },
+  // sentido: +1 se PWM positivo AUMENTA a contagem do encoder (deduzido do firmware)
+  SIGN: { LT: -1, B: -1, O: 1, C: 1, MP: 1, GP: 1, G: 1 },
+  DEAD: 12,                                       // PWM minimo para o motor vencer o atrito
+  // Pose de zero (fotos da bancada, 13/10): ombro 45 graus para tras, antebraco na
+  // horizontal apontando para frente, garra aberta apontando para cima e para frente
+  // (~50 graus da vertical). Angulos relativos ao elo anterior.
+  QMIN: { O: -45, C: 135, MP: -40, GP: -180 },    // angulo (graus) na chave fim de curso
+  // graus por contagem; negativo = a junta gira no sentido contrario ao aumentar o encoder
+  DPC:  { O: 165 / 18000, C: -155 / 20010, MP: 180 / 10680, GP: 360 / 23410 },
+  PREF: { O: 0, C: 0, MP: 0, GP: 0 },             // contagem na chave fim de curso (15/10: todos comecam em 0)
+  // base no zero: braco apontando para o lado oposto a esteira, perpendicular ao trilho
+  B:  { pMin: 0, pMax: 53000, qMin: -180, qMax: 120 },
+  LT: { pLen: 80000, xStart: 0.05, xLen: 0.85 },  // trilho de 0,85 m
+  G:  { pClosed: 26095, maxOpen: 0.07 },          // abertura maxima 70 mm
+  DIM: { shoulderY: 0.23, shoulderZ: 0.04, upper: 0.35, fore: 0.23, wrist: 0.05 },  // medido com trena em 13/10: ombro-cotovelo 35 cm, cotovelo-punho 23 cm
+};
+
+// =====================================================================================
+//  ESTADO FISICO (o que o "hardware" esta fazendo)
+// =====================================================================================
+const AXES = ["LT", "B", "O", "C", "MP", "GP", "G"];
+const ARM = ["O", "C", "MP", "GP"];
+const pwm = { LT: 0, B: 0, O: 0, C: 0, MP: 0, GP: 0, G: 0 };
+const phys = {};   // posicao fisica de cada motor, em contagens
+const off = {};    // encoder = phys - off (zerado ao ligar e no homing)
+let simMs = 0;
+let realMode = false;
+
+const MOVIMENTOS = [
+  ["Nenhum",                 0,    0,    0,   0,   0,   0,   0],
+  ["Base recuar",           0,  -80,    0,   0,   0,   0,   0],
+  ["Base avancar",            0,   80,    0,   0,   0,   0,   0],
+  ["Ombro recuar",           0,    0, -150,  90, -80,  80,   0],   // [15/10] nomes conforme o movimento real
+  ["Ombro avancar",          0,    0,  150, -90,  80, -80,   0],
+  ["Cotovelo recuar",        0,    0,    0, -80, 100, -90,   0],
+  ["Cotovelo avancar",       0,    0,    0,  80,-100,  90,   0],   // Treino: compensacao simetrica (no firmware: -50 / 50)
+  ["Mov. punho recuar",      0,    0,    0,   0, -80,  80,   0],
+  ["Mov. punho avancar",     0,    0,    0,   0,  80, -80,   0],
+  ["Giro punho recuar",     0,    0,    0,   0, -90, -80,   0],
+  ["Giro punho avancar",      0,    0,    0,   0,  90,  80,   0],
+  ["Garra abrir",            0,    0,    0,   0,   0,   0, -80],   // [15/10] fechar = PWM positivo
+  ["Garra fechar",           0,    0,    0,   0,   0,   0,  80],
+  ["Linha transv. esquerda", 230,  0,    0,   0,   0,   0,   0],
+  ["Linha transv. direita", -230,  0,    0,   0,   0,   0,   0],
+].map(r => ({ nome: r[0], LT: r[1], B: r[2], O: r[3], C: r[4], MP: r[5], GP: r[6], G: r[7] }));
+
+const MV = { NENHUM: 0, B_AVANCAR: 1, B_RECUAR: 2, O_AVANCAR: 3, O_RECUAR: 4, C_AVANCAR: 5, C_RECUAR: 6,
+  MP_AVANCAR: 7, MP_RECUAR: 8, GP_AVANCAR: 9, GP_RECUAR: 10, G_ABRIR: 11, G_FECHAR: 12,
+  LT_ESQUERDA: 13, LT_DIREITA: 14, TOTAL: 15 };
+
+// ---- cinematica acoplada: cada movimento compensado do firmware gira so a sua junta ----
+function inv(A) {
+  const n = A.length;
+  const M = A.map((r, i) => [...r, ...Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))]);
+  for (let c = 0; c < n; c++) {
+    let piv = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[piv][c])) piv = r;
+    [M[c], M[piv]] = [M[piv], M[c]];
+    const d = M[c][c];
+    for (let j = 0; j < 2 * n; j++) M[c][j] /= d;
+    for (let r = 0; r < n; r++) if (r !== c) {
+      const f = M[r][c];
+      for (let j = 0; j < 2 * n; j++) M[r][j] -= f * M[c][j];
+    }
+  }
+  return M.map(r => r.slice(n));
+}
+const mul = (A, B) => A.map(r => B[0].map((_, j) => r.reduce((s, v, k) => s + v * B[k][j], 0)));
+const mv = (A, v) => A.map(r => r.reduce((s, x, k) => s + x * v[k], 0));
+
+const AVANCO = [MV.O_AVANCAR, MV.C_AVANCAR, MV.MP_AVANCAR, MV.GP_AVANCAR];
+const E = ARM.map(i => AVANCO.map(m => CFG.SIGN[i] * CFG.K[i] * MOVIMENTOS[m][i]));
+const Dg = ARM.map((a, i) => ARM.map((_, j) => (i === j ? CFG.DPC[a] * E[i][i] : 0)));
+const Mq = mul(Dg, inv(E));
+const Mp = inv(Mq);
+const qMax = {};
+ARM.forEach(a => { qMax[a] = CFG.QMIN[a] + CFG.DPC[a] * ({ O: 18000, C: 20010, MP: 10680, GP: 23410 }[a] - CFG.PREF[a]); });
+
+function toQ(p) {
+  const r = mv(Mq, ARM.map(a => p[a] - CFG.PREF[a]));
+  const q = {}; ARM.forEach((a, i) => (q[a] = CFG.QMIN[a] + r[i])); return q;
+}
+function toP(q) {
+  const r = mv(Mp, ARM.map(a => q[a] - CFG.QMIN[a]));
+  const p = {}; ARM.forEach((a, i) => (p[a] = CFG.PREF[a] + r[i])); return p;
+}
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+function rate(ax) {
+  const v = pwm[ax];
+  if (Math.abs(v) < CFG.DEAD) return 0;
+  return CFG.SIGN[ax] * CFG.K[ax] * v;
+}
+
+function physicsStep(dt) {
+  simMs += dt * 1000;
+  mundoPasso(dt);   // esteira, alimentador e quedas no mesmo relogio do firmware
+  if (realMode) return;
+  phys.B = clamp(phys.B + rate("B") * dt, CFG.B.pMin - 400, CFG.B.pMax + 1500);
+  phys.LT = clamp(phys.LT + rate("LT") * dt, -300, CFG.LT.pLen);
+  phys.G = clamp(phys.G + rate("G") * dt, -300, CFG.G.pClosed + 300);
+  const pc = {}; let moving = false;
+  for (const a of ARM) { const r = rate(a); pc[a] = phys[a] + r * dt; if (r) moving = true; }
+  if (!moving) return;
+  const q = toQ(pc); let parou = false;
+  for (const a of ARM) {
+    // u = contagens a partir da chave; batente mecanico 2 graus antes da chave e 6 depois do maximo
+    const d = CFG.DPC[a], u = (q[a] - CFG.QMIN[a]) / d;
+    const lo = -2 / Math.abs(d), hi = (qMax[a] - CFG.QMIN[a]) / d + 6 / Math.abs(d);
+    const uc = clamp(u, lo, hi);
+    if (uc !== u) { q[a] = CFG.QMIN[a] + uc * d; parou = true; }
+  }
+  const pn = parou ? toP(q) : pc;
+  for (const a of ARM) phys[a] = pn[a];
+}
+
+// chaves fim de curso (HIGH = acionada)
+function sw(ax) {
+  if (ax === "B") return phys.B <= CFG.B.pMin + 3 ? 1 : 0;
+  if (ax === "LT") return phys.LT <= 3 ? 1 : 0;
+  return (toQ(phys)[ax] - CFG.QMIN[ax]) / CFG.DPC[ax] <= 3 ? 1 : 0;
+}
+
+function poseInicial() {
+  // Treino: o braco ja comeca na pose de zero (chaves acionadas), entao o zeramento termina na hora
+  ARM.forEach(a => (phys[a] = CFG.PREF[a]));
+  phys.B = CFG.B.pMin; phys.LT = 15000; phys.G = 0;
+}
+
+// ---- relogio: o firmware cede a vez a cada passo da fisica ----
+let waiters = [];
+let lastT = performance.now();
+function scheduler() {
+  const now = performance.now();
+  physicsStep(Math.min(0.05, (now - lastT) / 1000));
+  lastT = now;
+  const w = waiters; waiters = []; w.forEach(f => f());
+  setTimeout(scheduler, 4);
+}
+const RESET = { reset: true };
+let fwGen = 0;
+async function frame() {
+  const g = fwGen;
+  await new Promise(r => waiters.push(r));
+  if (g !== fwGen) throw RESET;
+}
+
+// ---- serial ----
+const rxQueue = [];
+const Serial = {
+  print(x) { termWrite(String(x)); },
+  println(x = "") { termWrite(String(x) + "\n"); },
+  available() { return rxQueue.length; },
+  read() { return rxQueue.shift(); },
+};
+const millis = () => Math.floor(simMs);
+const constrain = (v, a, b) => Math.min(b, Math.max(a, v));
+
+// =====================================================================================
+//  FIRMWARE - porte de BracoTeclado.ino (mesma logica, linha a linha)
+// =====================================================================================
+const HOMING_NA_INICIALIZACAO = true;
+const HOMING_TIMEOUT_MS = 15000, TEMPO_PRIMEIRA_TECLA_MS = 600, TEMPO_REPETICAO_MS = 150;
+const INTERVALO_MONITOR_MS = 300, TEMPO_CONFIRMA_Z_MS = 2000, TIMEOUT_MOVIMENTO_MS = 30000;
+const LIM = { LT: [0, 100000000], B: [0, 53000], O: [0, 18000], C: [0, 20010],
+  MP: [0, 10680], GP: [0, 23410], G: [0, 26095] };
+const SEGURAR = 0, CONTINUO = 1;
+const P = { B: 0, O: 1, C: 2, MP: 3, GP: 4, G: 5, LT: 6, ESPERA: 7, VEL: 8, ZERAR: 9, INVALIDO: 10 };
+const NOMES_PASSO = ["B", "O", "C", "MP", "GP", "G", "LT", "ESPERA", "VEL", "ZERAR"];
+const MAX_PASSOS = 100;
+const EIXOS_AUTO = [
+  { ax: "B",  sobe: MV.B_AVANCAR,  desce: MV.B_RECUAR },
+  { ax: "O",  sobe: MV.O_RECUAR,   desce: MV.O_AVANCAR },
+  { ax: "C",  sobe: MV.C_RECUAR,   desce: MV.C_AVANCAR },
+  { ax: "MP", sobe: MV.MP_RECUAR,  desce: MV.MP_AVANCAR },
+  { ax: "GP", sobe: MV.GP_RECUAR,  desce: MV.GP_AVANCAR },
+  { ax: "G",  sobe: MV.G_FECHAR,   desce: MV.G_ABRIR },
+  { ax: "LT", sobe: MV.LT_DIREITA, desce: MV.LT_ESQUERDA },
+];
+const PROGRAMA_DEMO = [[8, 100], [5, 0], [0, 15000], [1, 6000], [2, 8000], [7, 500], [5, 15000], [7, 500],
+  [1, 2000], [0, 40000], [1, 6000], [7, 500], [5, 0], [7, 500], [1, 2000], [2, 2000], [0, 25000]]
+  .map(([t, v]) => ({ tipo: t, valor: v }));
+
+let movAtual, modo, velocidadePct, teclaRepetindo, ultimaTeclaMs, monitorLigado, ultimoMonitorMs;
+let pedidoZeramentoMs, aguardandoConfirmaZ, estadoEscape, programa, gravandoPrograma, gravacaoComErro;
+let linhaCmd, lendoLinhaCmd, ignorandoLinhaNoAbort, estado;
+function resetVars() {
+  movAtual = MV.NENHUM; modo = SEGURAR; velocidadePct = 100; teclaRepetindo = false; ultimaTeclaMs = 0;
+  monitorLigado = false; ultimoMonitorMs = 0; pedidoZeramentoMs = 0; aguardandoConfirmaZ = false;
+  estadoEscape = 0; programa = []; gravandoPrograma = false; gravacaoComErro = false;
+  linhaCmd = ""; lendoLinhaCmd = false; ignorandoLinhaNoAbort = false; estado = "Ligando…";
+}
+
+const lerPos = ax => Math.round(phys[ax] - off[ax]);
+const gravarPos = (ax, v) => { off[ax] = phys[ax] - v; };
+const digitalRead = ax => sw(ax);
+const HIGH = 1, LOW = 0;
+
+async function setup() {
+  pararTudo();
+  programa = PROGRAMA_DEMO.map(p => ({ ...p }));
+  Serial.println("\r\n=== Braco robotico - controle pelo teclado ===");
+  if (HOMING_NA_INICIALIZACAO) await zeramento();
+  mostrarAjuda();
+  estado = "Parado";
+}
+
+async function firmwareMain() {
+  try {
+    await setup();
+    while (true) {
+      while (Serial.available() > 0) await processarByte(Serial.read());
+      atualizarMovimento();
+      if (aguardandoConfirmaZ && millis() - pedidoZeramentoMs > TEMPO_CONFIRMA_Z_MS) {
+        aguardandoConfirmaZ = false;
+        Serial.println("Zeramento cancelado.");
+      }
+      if (monitorLigado && millis() - ultimoMonitorMs >= INTERVALO_MONITOR_MS) {
+        ultimoMonitorMs = millis();
+        mostrarPosicoes();
+      }
+      await frame();
+    }
+  } catch (e) { if (e !== RESET) console.error(e); }
+}
+
+async function processarByte(c) {
+  const code = c.charCodeAt(0);
+  if (lendoLinhaCmd) {
+    if (c === "\r" || c === "\n") { lendoLinhaCmd = false; await processarLinha(linhaCmd); }
+    else if (code === 8 || code === 127) { linhaCmd = linhaCmd.slice(0, -1); }
+    else if (linhaCmd.length < 39) { linhaCmd += c.toUpperCase(); }
+    return;
+  }
+  if (c === "#") { pararMovimento(null); lendoLinhaCmd = true; linhaCmd = ""; estadoEscape = 0; return; }
+  if (gravandoPrograma) return;
+
+  if (estadoEscape === 1) {
+    estadoEscape = c === "[" ? 2 : 0;
+    if (estadoEscape === 2) return;
+  } else if (estadoEscape === 2) {
+    estadoEscape = 0;
+    if (c === "D") { comandoMovimento(MV.LT_ESQUERDA); return; }
+    if (c === "C") { comandoMovimento(MV.LT_DIREITA); return; }
+    if (c >= "0" && c <= "9") estadoEscape = 3;
+    return;
+  } else if (estadoEscape === 3) {
+    const continua = (c >= "0" && c <= "9") || c === ";";
+    if (!continua) estadoEscape = 0;
+    return;
+  }
+  if (code === 27) { estadoEscape = 1; return; }
+  if (c === "\r" || c === "\n") return;
+  if (c !== "z" && c !== "Z") aguardandoConfirmaZ = false;
+
+  switch (c.toLowerCase()) {
+    case "q": comandoMovimento(MV.B_AVANCAR); break;
+    case "a": comandoMovimento(MV.B_RECUAR); break;
+    case "w": comandoMovimento(MV.O_AVANCAR); break;
+    case "s": comandoMovimento(MV.O_RECUAR); break;
+    case "e": comandoMovimento(MV.C_AVANCAR); break;
+    case "d": comandoMovimento(MV.C_RECUAR); break;
+    case "r": comandoMovimento(MV.MP_AVANCAR); break;
+    case "f": comandoMovimento(MV.MP_RECUAR); break;
+    case "t": comandoMovimento(MV.GP_AVANCAR); break;
+    case "g": comandoMovimento(MV.GP_RECUAR); break;
+    case "y": comandoMovimento(MV.G_FECHAR); break;   // [15/10] Y fecha
+    case "h": comandoMovimento(MV.G_ABRIR); break;    // [15/10] H abre
+    case "u": comandoMovimento(MV.LT_ESQUERDA); break;
+    case "j": comandoMovimento(MV.LT_DIREITA); break;
+    case " ": pararMovimento("Parado pelo usuario"); break;
+    case "+": case "=": alterarVelocidade(10); break;
+    case "-": case "_": alterarVelocidade(-10); break;
+    case "m":
+      pararMovimento(null);
+      modo = modo === SEGURAR ? CONTINUO : SEGURAR;
+      Serial.print("Modo: ");
+      Serial.println(modo === SEGURAR ? "SEGURAR (anda enquanto a tecla estiver pressionada)" : "CONTINUO (anda ate ESPACO ou limite)");
+      break;
+    case "p": mostrarPosicoes(); break;
+    case "v":
+      monitorLigado = !monitorLigado;
+      Serial.print("Monitoramento de posicao: "); Serial.println(monitorLigado ? "LIGADO" : "DESLIGADO");
+      break;
+    case "z":
+      pararMovimento(null);
+      if (aguardandoConfirmaZ && millis() - pedidoZeramentoMs <= TEMPO_CONFIRMA_Z_MS) {
+        aguardandoConfirmaZ = false; await zeramento();
+      } else {
+        aguardandoConfirmaZ = true; pedidoZeramentoMs = millis();
+        Serial.println("Pressione Z novamente para confirmar o ZERAMENTO de todos os eixos.");
+      }
+      break;
+    case "1": await executarPrograma(1); break;
+    case "x":
+      pararMovimento(null);
+      gravarPos("G", LIM.G[0]);
+      Serial.println("Garra: posicao atual definida como ABERTA (G=0).");
+      break;
+    case "?": case "i": mostrarAjuda(); break;
+    default: break;
+  }
+}
+
+function comandoMovimento(m) {
+  ultimaTeclaMs = millis();
+  if (m === movAtual) { teclaRepetindo = true; return; }
+  pararTudo();
+  movAtual = MV.NENHUM;
+  if (limiteAtingido(m)) {
+    const TECLAS = " QAWSEDRFTGHYUJ";
+    const oposto = m % 2 === 1 ? m + 1 : m - 1;
+    const porChave = [MV.B_RECUAR, MV.O_AVANCAR, MV.C_AVANCAR, MV.MP_AVANCAR, MV.GP_AVANCAR, MV.LT_ESQUERDA].includes(m);
+    Serial.print(">> "); Serial.print(MOVIMENTOS[m].nome);
+    Serial.print(porChave ? ": CHAVE FIM DE CURSO acionada (posicao de zero)." : ": LIMITE MAXIMO do encoder atingido.");
+    Serial.print(" Use a tecla "); Serial.print(TECLAS[oposto]); Serial.println(" para mover no outro sentido.");
+    return;
+  }
+  movAtual = m; teclaRepetindo = false;
+  aplicarPWM(m, velocidadePct);
+  estado = "Movendo: " + MOVIMENTOS[m].nome;
+  Serial.print("Movendo: "); Serial.print(MOVIMENTOS[m].nome);
+  Serial.print("  (vel "); Serial.print(velocidadePct); Serial.println("%)");
+}
+
+function atualizarMovimento() {
+  if (movAtual === MV.NENHUM) return;
+  if (limiteAtingido(movAtual)) { pararMovimento(">> LIMITE atingido"); return; }
+  if (modo === SEGURAR) {
+    const limite = teclaRepetindo ? TEMPO_REPETICAO_MS : TEMPO_PRIMEIRA_TECLA_MS;
+    if (millis() - ultimaTeclaMs > limite) pararMovimento(null);
+  }
+}
+
+function pararMovimento(motivo) {
+  const anterior = movAtual;
+  pararTudo(); movAtual = MV.NENHUM; teclaRepetindo = false;
+  if (estado.startsWith("Movendo")) estado = "Parado";
+  if (anterior !== MV.NENHUM) {
+    if (motivo != null) { Serial.print(motivo); Serial.print(" - "); }
+    Serial.print("Parou: "); Serial.print(MOVIMENTOS[anterior].nome); Serial.print("  ->  ");
+    mostrarPosicaoDoEixo(anterior);
+  } else if (motivo != null) {
+    Serial.println("Todos os motores parados.");
+  }
+}
+
+function limiteAtingido(m) {
+  switch (m) {
+    case MV.B_AVANCAR: return lerPos("B") >= LIM.B[1];
+    case MV.B_RECUAR:
+      if (digitalRead("B") === HIGH) { gravarPos("B", LIM.B[0]); return true; }
+      return lerPos("B") <= LIM.B[0];
+    case MV.O_AVANCAR:
+      if (digitalRead("O") === HIGH) { gravarPos("O", LIM.O[0]); return true; }
+      return false;
+    case MV.O_RECUAR: return lerPos("O") >= LIM.O[1];
+    case MV.C_AVANCAR:
+      if (digitalRead("C") === HIGH) return true;   // [14/10] sem rezerar: contagem deslocada pela compensacao
+      return false;
+    case MV.C_RECUAR: return lerPos("C") >= LIM.C[1];
+    case MV.MP_AVANCAR:
+      if (digitalRead("MP") === HIGH) return true;   // [14/10] sem rezerar: contagem deslocada pela compensacao
+      return false;
+    case MV.MP_RECUAR: return lerPos("MP") >= LIM.MP[1];
+    case MV.GP_AVANCAR:
+      if (digitalRead("GP") === HIGH) return true;   // [14/10] sem rezerar: contagem deslocada pela compensacao
+      return false;
+    case MV.GP_RECUAR: return lerPos("GP") >= LIM.GP[1];
+    case MV.G_ABRIR: return modo === CONTINUO && lerPos("G") < LIM.G[0];
+    case MV.G_FECHAR: return modo === CONTINUO && lerPos("G") >= LIM.G[1];
+    case MV.LT_ESQUERDA: return digitalRead("LT") === HIGH;
+    case MV.LT_DIREITA: return lerPos("LT") >= LIM.LT[1];
+    default: return true;
+  }
+}
+
+const escala = (v, pct) => constrain(Math.trunc(v * pct / 100), -255, 255);
+function aplicarPWM(m, pct) { const d = MOVIMENTOS[m]; AXES.forEach(ax => (pwm[ax] = escala(d[ax], pct))); }
+function pararTudo() { AXES.forEach(ax => (pwm[ax] = 0)); }
+function alterarVelocidade(delta) {
+  velocidadePct = constrain(velocidadePct + delta, 20, 150);
+  Serial.print("Velocidade: "); Serial.print(velocidadePct); Serial.println("%");
+  if (movAtual !== MV.NENHUM) aplicarPWM(movAtual, velocidadePct);
+}
+
+async function zeramento() {
+  const antes = estado;
+  estado = "Zerando…";
+  Serial.println("ZERAMENTO iniciado (ESPACO aborta)...");
+  pararTudo(); movAtual = MV.NENHUM;
+  const etapas = [
+    { nome: "Base", ax: "B", mov: MV.B_RECUAR },
+    { nome: "Movimento punho", ax: "MP", mov: MV.MP_AVANCAR },
+    { nome: "Giro punho", ax: "GP", mov: MV.GP_AVANCAR },
+    { nome: "Cotovelo", ax: "C", mov: MV.C_AVANCAR },
+    { nome: "Ombro", ax: "O", mov: MV.O_AVANCAR },
+  ];
+  for (const et of etapas) {
+    Serial.print("  Zerando "); Serial.print(et.nome); Serial.print("... ");
+    const inicio = millis();
+    if (digitalRead(et.ax) === LOW) aplicarPWM(et.mov, 100);
+    while (digitalRead(et.ax) === LOW) {
+      if (abortarPeloTeclado()) { pararTudo(); Serial.println("\r\nZERAMENTO ABORTADO pelo usuario."); estado = "Parado"; return false; }
+      if (millis() - inicio > HOMING_TIMEOUT_MS) { Serial.print("TIMEOUT (chave nao respondeu) - "); break; }
+      await frame();
+    }
+    pararTudo();
+    gravarPos(et.ax, LIM[et.ax][0]);
+    Serial.println("ok");
+  }
+  // [13/10] re-zera os eixos que continuam na chave (as compensacoes mexeram nas contagens)
+  for (const et of etapas) if (digitalRead(et.ax) === HIGH) gravarPos(et.ax, LIM[et.ax][0]);
+  const inicio = millis();
+  if (lerPos("G") > LIM.G[0]) {
+    Serial.print("  Abrindo garra... ");
+    aplicarPWM(MV.G_ABRIR, 100);
+    while (lerPos("G") > LIM.G[0]) {
+      if (abortarPeloTeclado()) { pararTudo(); Serial.println("\r\nZERAMENTO ABORTADO pelo usuario."); estado = "Parado"; return false; }
+      if (millis() - inicio > HOMING_TIMEOUT_MS) break;
+      await frame();
+    }
+    pararTudo(); Serial.println("ok");
+  }
+  Serial.println("ZERAMENTO concluido.");
+  mostrarPosicoes();
+  estado = antes.startsWith("Executando") ? antes : "Parado";
+  return true;
+}
+
+function abortarPeloTeclado() {
+  while (Serial.available() > 0) {
+    const c = Serial.read();
+    if (c === "#") ignorandoLinhaNoAbort = true;
+    else if (c === "\r" || c === "\n") ignorandoLinhaNoAbort = false;
+    else if (!ignorandoLinhaNoAbort && (c === " " || c.charCodeAt(0) === 27)) return true;
+  }
+  return false;
+}
+
+function tipoDoComando(cmd) { const i = NOMES_PASSO.indexOf(cmd); return i < 0 ? P.INVALIDO : i; }
+function atol(s) { const m = /^\s*([+-]?\d+)/.exec(s || ""); return m ? parseInt(m[1], 10) : 0; }
+
+async function processarLinha(texto) {
+  const toks = texto.split(/[ \t=:]+/).filter(Boolean);
+  const cmd = toks[0];
+  if (cmd == null) return;
+  if (cmd[0] === "/" || cmd[0] === "-" || cmd[0] === "#") return;
+  const arg = toks[1];
+  const valor = arg != null ? atol(arg) : 0;
+
+  if (cmd === "INICIO") {
+    gravandoPrograma = true; gravacaoComErro = false; programa = [];
+    Serial.println("Gravando programa... (termine com #FIM)"); return;
+  }
+  if (cmd === "FIM") {
+    if (!gravandoPrograma) return;
+    gravandoPrograma = false;
+    Serial.print("Programa gravado com "); Serial.print(programa.length); Serial.println(" passos.");
+    if (gravacaoComErro) Serial.println("ATENCAO: algumas linhas foram ignoradas (invalidas ou programa cheio).");
+    listarPrograma();
+    Serial.println("Tecla 1 ou #EXECUTAR <vezes> para rodar.");
+    return;
+  }
+  if (cmd === "EXECUTAR" || cmd === "EXEC") {
+    if (gravandoPrograma) return;
+    await executarPrograma(arg != null ? valor : 1); return;
+  }
+  if (cmd === "LISTAR") { listarPrograma(); return; }
+  if (cmd === "POS") { mostrarPosicoes(); return; }
+
+  const tipo = tipoDoComando(cmd);
+  if (tipo === P.INVALIDO || (tipo !== P.ZERAR && arg == null)) {
+    gravacaoComErro = gravandoPrograma;
+    Serial.print("Comando invalido: #"); Serial.println(cmd); return;
+  }
+  if (gravandoPrograma) {
+    if (programa.length < MAX_PASSOS) programa.push({ tipo, valor }); else gravacaoComErro = true;
+    return;
+  }
+  await executarPasso(tipo, valor);
+  Serial.println("PRONTO");
+}
+
+function imprimirPasso(tipo, valor) { Serial.print(NOMES_PASSO[tipo]); if (tipo !== P.ZERAR) { Serial.print(" "); Serial.print(valor); } }
+function listarPrograma() {
+  Serial.print("Programa ("); Serial.print(programa.length); Serial.println(" passos):");
+  programa.forEach((p, i) => { Serial.print("  "); Serial.print(i + 1); Serial.print(": #"); imprimirPasso(p.tipo, p.valor); Serial.println(); });
+}
+
+async function executarPrograma(vezes) {
+  pararMovimento(null);
+  if (programa.length === 0) { Serial.println("Nenhum programa gravado (use #INICIO ... #FIM)."); return; }
+  const velocidadeAntes = velocidadePct;
+  ignorandoLinhaNoAbort = false;
+  Serial.println("EXECUTANDO programa (ESPACO interrompe)...");
+  let ok = true;
+  for (let ciclo = 1; ok && (vezes <= 0 || ciclo <= vezes); ciclo++) {
+    Serial.print("-- Ciclo "); Serial.println(ciclo);
+    for (let i = 0; ok && i < programa.length; i++) {
+      estado = `Executando passo ${i + 1}/${programa.length}`;
+      Serial.print("Passo "); Serial.print(i + 1); Serial.print("/"); Serial.print(programa.length); Serial.print(": ");
+      imprimirPasso(programa[i].tipo, programa[i].valor); Serial.print(" ... ");
+      ok = await executarPasso(programa[i].tipo, programa[i].valor);
+    }
+  }
+  pararTudo();
+  velocidadePct = velocidadeAntes;
+  estado = "Parado";
+  Serial.println(ok ? "PROGRAMA CONCLUIDO." : "PROGRAMA INTERROMPIDO.");
+  mostrarPosicoes();
+}
+
+async function executarPasso(tipo, valor) {
+  switch (tipo) {
+    case P.ESPERA: {
+      const inicio = millis();
+      while (millis() - inicio < Math.max(valor, 0)) {
+        if (abortarPeloTeclado()) { Serial.println("interrompido"); return false; }
+        await frame();
+      }
+      Serial.println("ok"); return true;
+    }
+    case P.VEL:
+      velocidadePct = constrain(valor, 20, 150);
+      Serial.print("velocidade "); Serial.print(velocidadePct); Serial.println("%"); return true;
+    case P.ZERAR:
+      Serial.println(); return await zeramento();
+    default:
+      return await moverPara(EIXOS_AUTO[tipo], valor);
+  }
+}
+
+async function moverPara(eixo, alvo) {
+  // [14/10] ombro, cotovelo e punho tem contagens deslocadas pelas compensacoes: o alvo nao e
+  // cortado (a chave fim de curso e o limite maximo continuam protegendo o eixo)
+  if (!["O", "C", "MP", "GP"].includes(eixo.ax)) alvo = constrain(alvo, LIM[eixo.ax][0], LIM[eixo.ax][1]);
+  let pos = lerPos(eixo.ax);
+  if (pos === alvo) { Serial.println("ja esta na posicao"); return true; }
+  const subindo = alvo > pos;
+  const m = subindo ? eixo.sobe : eixo.desce;
+  if (limiteAtingido(m)) { Serial.println("LIMITE/chave fim de curso - pulando"); return true; }
+  let ok = true;
+  const inicio = millis();
+  aplicarPWM(m, velocidadePct);
+  while (true) {
+    pos = lerPos(eixo.ax);
+    if (subindo ? pos >= alvo : pos <= alvo) break;
+    if (limiteAtingido(m)) { Serial.print("LIMITE atingido "); break; }
+    if (abortarPeloTeclado()) { Serial.print("interrompido "); ok = false; break; }
+    if (millis() - inicio > TIMEOUT_MOVIMENTO_MS) { Serial.print("TIMEOUT (eixo travado ou encoder sem sinal?) "); ok = false; break; }
+    await frame();
+  }
+  pararTudo();
+  Serial.print("pos="); Serial.println(lerPos(eixo.ax));
+  return ok;
+}
+
+function mostrarPosicaoDoEixo(m) {
+  const ax = [null, "B", "B", "O", "O", "C", "C", "MP", "MP", "GP", "GP", "G", "G", "LT", "LT"][m];
+  if (!ax) { Serial.println(); return; }
+  Serial.print(ax + "="); Serial.println(lerPos(ax));
+}
+function mostrarPosicoes() {
+  Serial.println(`POS  LT=${lerPos("LT")}  B=${lerPos("B")}  O=${lerPos("O")}  C=${lerPos("C")}  MP=${lerPos("MP")}  GP=${lerPos("GP")}  G=${lerPos("G")}`);
+  Serial.println(`CHAVES LT=${sw("LT")}  B=${sw("B")}  O=${sw("O")}  C=${sw("C")}  MP=${sw("MP")}  GP=${sw("GP")}`);
+}
+function mostrarAjuda() {
+  [
+    "--------------------------------------------------",
+    " Q / A  Base             (recuar / avancar)",
+    " W / S  Ombro            (recuar / avancar)",
+    " E / D  Cotovelo         (recuar / avancar)",
+    " R / F  Movimento punho  (recuar / avancar)",
+    " T / G  Giro do punho    (recuar / avancar)",
+    " Y / H  Garra            (fechar / abrir)   X  garra atual = aberta (G=0)",
+    " U / J  Linha transversal (esquerda / direita)  ou setas <- ->",
+    " ESPACO PARAR TUDO",
+    " + / -  Velocidade        M  Modo segurar/continuo",
+    " P  Posicoes   V  Monitorar posicao   Z Z  Zeramento   ?  Ajuda",
+    " 1  Executa o programa automatico gravado (ESPACO interrompe)",
+    " Comandos de texto: #INICIO  #B 25000  #O 6000  #C 8000  #G 15000",
+    "   #ESPERA 500  #VEL 80  #ZERAR  #FIM  #EXECUTAR 3  #LISTAR  #POS",
+    "--------------------------------------------------",
+  ].forEach(l => Serial.println(l));
+  Serial.print("Modo: "); Serial.print(modo === SEGURAR ? "SEGURAR" : "CONTINUO");
+  Serial.print("   Velocidade: "); Serial.print(velocidadePct); Serial.println("%");
+}
+
+// =====================================================================================
+//  TERMINAL
+// =====================================================================================
+const termEl = document.getElementById("term");
+const echoEl = document.getElementById("echo");
+let termLines = [], termCur = "", termDirty = true;
+function termWrite(s) {
+  for (const ch of s) {
+    if (ch === "\r") continue;
+    if (ch === "\n") { termLines.push(termCur); linhaSerial(termCur); termCur = ""; } else termCur += ch;
+  }
+  if (termLines.length > 800) termLines = termLines.slice(-600);
+  termDirty = true;
+}
+function termNote(s) { termWrite("\n[bancada] " + s + "\n"); }
+function termFlush() {
+  if (!termDirty) return;
+  termDirty = false;
+  const nearBottom = termEl.scrollHeight - termEl.scrollTop - termEl.clientHeight < 40;
+  termEl.textContent = termLines.slice(-500).join("\n") + "\n" + termCur;
+  if (nearBottom) termEl.scrollTop = termEl.scrollHeight;
+}
+
+// envio de bytes: simulador ou braco real
+let echoLine = null;
+function sendBytes(arr) {
+  for (const ch of arr) {
+    if (ch === "#") echoLine = "#";
+    else if (echoLine !== null) {
+      if (ch === "\r" || ch === "\n") echoLine = null;
+      else if (ch === "\b") echoLine = echoLine.slice(0, -1);
+      else echoLine += ch;
+    }
+  }
+  echoEl.textContent = echoLine ? "digitando: " + echoLine.toUpperCase() : "";
+  if (realMode && realLink) {
+    realLink.write(arr.join(""));
+  } else if (!realMode) {
+    rxQueue.push(...arr);
+  }
+}
+
+function keyToBytes(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return null;
+  switch (e.key) {
+    case "Enter": return ["\r"];
+    case "Backspace": return ["\b"];
+    case "Escape": return ["\x1b"];
+    case "ArrowLeft": return ["\x1b", "[", "D"];
+    case "ArrowRight": return ["\x1b", "[", "C"];
+    case "ArrowUp": return ["\x1b", "[", "A"];
+    case "ArrowDown": return ["\x1b", "[", "B"];
+  }
+  return e.key.length === 1 ? [e.key] : null;
+}
+const editavel = t => t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
+// teclas de movimento: pela ponte do app viram "segurar/soltar" (a repeticao e feita no PC)
+const HOLD_KEYS = new Set([..."qawsedrftgyhuj", "arrowleft", "arrowright"]);
+const usaSegurar = () => realMode && realLink && realLink.hold;
+let teclaSegurada = null;
+document.addEventListener("keydown", e => {
+  if (editavel(e.target)) return;
+  if (e.target && e.target.tagName === "BUTTON" && e.key === "Enter") return;
+  if (e.target && e.target.tagName === "SELECT") return;
+  const b = keyToBytes(e);
+  if (!b) return;
+  e.preventDefault();
+  const k = e.key.toLowerCase();
+  if (usaSegurar() && HOLD_KEYS.has(k) && echoLine === null) {
+    if (e.repeat || teclaSegurada === k) return;
+    teclaSegurada = k;
+    realLink.holdStart(b.join(""));
+    return;
+  }
+  sendBytes(b);
+});
+document.addEventListener("keyup", e => {
+  if (e.key === " " && !editavel(e.target)) e.preventDefault();
+  if (teclaSegurada && e.key.toLowerCase() === teclaSegurada) { teclaSegurada = null; if (realLink && realLink.hold) realLink.holdStop(); }
+  if (realMode && HOLD_KEYS.has(e.key.toLowerCase()) && echoLine === null && !editavel(e.target)) pedirPosicoes();
+});
+window.addEventListener("blur", () => { if (teclaSegurada) { teclaSegurada = null; if (realLink && realLink.hold) realLink.holdStop(); } });
+
+// =====================================================================================
+//  PAINEL: tabela de eixos e botoes
+// =====================================================================================
+const UI_AXES = [
+  { ax: "B",  nome: "Base",              k: [["Q", "recuar"], ["A", "avançar"]] },
+  { ax: "O",  nome: "Ombro",             k: [["W", "recuar"], ["S", "avançar"]] },
+  { ax: "C",  nome: "Cotovelo",          k: [["E", "recuar"], ["D", "avançar"]] },
+  { ax: "MP", nome: "Movimento punho",   k: [["R", "recuar"], ["F", "avançar"]] },
+  { ax: "GP", nome: "Giro do punho",     k: [["T", "recuar"], ["G", "avançar"]] },
+  { ax: "G",  nome: "Garra",             k: [["Y", "fechar"], ["H", "abrir"]] },
+  { ax: "LT", nome: "Linha transversal", k: [["U", "esquerda"], ["J", "direita"]] },
+];
+function holdButton(btn, ch) {
+  let t1 = null, t2 = null;
+  let segurando = false;
+  const stop = () => {
+    const estavaAtivo = btn.classList.contains("on");
+    clearTimeout(t1); clearInterval(t2); t1 = t2 = null; btn.classList.remove("on");
+    if (segurando) { segurando = false; if (realLink && realLink.hold) realLink.holdStop(); }
+    if (realMode && estavaAtivo) pedirPosicoes();
+  };
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+    stop(); btn.classList.add("on");
+    if (usaSegurar()) { segurando = true; realLink.holdStart(ch); return; }
+    sendBytes([ch]);
+    t1 = setTimeout(() => { t2 = setInterval(() => sendBytes([ch]), 33); }, 500);   // igual a repeticao do Windows
+  });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => btn.addEventListener(ev, stop));
+}
+const rowRefs = {};
+const tbody = document.getElementById("axesBody");
+UI_AXES.forEach(u => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td class="name">${u.nome}<small>#${u.ax}</small></td><td><div class="keys"></div></td>
+    <td class="num enc"></td><td class="num pos"></td><td class="swc"></td>`;
+  const keys = tr.querySelector(".keys");
+  u.k.forEach(([key, lbl]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "jog";
+    b.innerHTML = `<kbd>${key}</kbd>${lbl}`;
+    b.setAttribute("aria-label", `${u.nome}: ${lbl} (tecla ${key})`);
+    holdButton(b, key.toLowerCase());
+    keys.appendChild(b);
+  });
+  tbody.appendChild(tr);
+  rowRefs[u.ax] = { enc: tr.querySelector(".enc"), pos: tr.querySelector(".pos"), sw: tr.querySelector(".swc") };
+  rowRefs[u.ax].sw.innerHTML = u.ax === "G" ? `<span class="na">sem chave</span>` : `<span class="sw" aria-label="chave"></span>`;
+});
+const ACOES = [
+  [" ", "PARAR", "Espaço", "stop"], ["+", "Vel +", "+"], ["-", "Vel −", "−"], ["m", "Modo", "M"],
+  ["p", "Posições", "P"], ["v", "Monitor", "V"], ["z", "Zerar", "Z Z"], ["x", "Garra = aberta", "X"],
+  ["1", "▶ Executar", "1"], ["?", "Ajuda", "?"],
+];
+const actionsEl = document.getElementById("actions");
+ACOES.forEach(([ch, lbl, k, cls]) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "act" + (cls ? " " + cls : "");
+  b.innerHTML = `<span>${lbl}</span><kbd>${k}</kbd>`;
+  b.addEventListener("click", () => sendBytes([ch]));
+  actionsEl.appendChild(b);
+});
+
+// =====================================================================================
+//  PROGRAMA
+// =====================================================================================
+const progEl = document.getElementById("prog");
+progEl.value = [
+  "#// Escolha um exercício e use Carregar modelo de programa,",
+  "#// ou escreva o seu. Linhas com #// são comentários.",
+  "#INICIO",
+  "#FIM",
+].join("\n");
+let lastCaret = null;   // ultima posicao do cursor no quadro (o clique no botao tira o foco)
+["keyup", "click", "select", "input"].forEach(ev => progEl.addEventListener(ev, () => { lastCaret = progEl.selectionStart; }));
+// Executar usa o numero de repeticoes escrito no quadro (#EXECUTAR 3); sem essa linha, roda 1 vez
+const btnExecutar = document.getElementById("btnExecutar");
+function vezesDoQuadro() {
+  const m = [...progEl.value.matchAll(/^#\s*EXEC(?:UTAR)?\s+(-?\d+)/gim)];
+  return m.length ? parseInt(m[m.length - 1][1], 10) : 1;
+}
+function rotuloExecutar() {
+  const n = vezesDoQuadro();
+  btnExecutar.textContent = n <= 0 ? "▶ Executar (sem fim)" : n === 1 ? "▶ Executar" : `▶ Executar (${n}×)`;
+}
+setInterval(rotuloExecutar, 400); rotuloExecutar();
+btnExecutar.addEventListener("click", e => {
+  if (!realMode && estado.startsWith("Executando")) { termNote("O programa ainda está rodando. Aperte Parar antes de executar de novo."); e.currentTarget.blur(); return; }
+  sendBytes([..."#EXECUTAR " + vezesDoQuadro(), "\r"]); e.currentTarget.blur(); });
+document.getElementById("btnPararProg").addEventListener("click", e => { sendBytes([" "]); e.currentTarget.blur(); });
+document.getElementById("btnEnviar").addEventListener("click", () => {
+  const txt = progEl.value.replace(/\r\n?/g, "\n");
+  sendBytes([...txt.split("\n").join("\r"), "\r"]);
+});
+document.getElementById("btnPonto").addEventListener("click", e => {
+  const txt = progEl.value;
+  let bloco = ["LT", "B", "O", "C", "MP", "GP", "G"].map(a => `#${a} ${lerPos(a)}`).join("\n") + "\n";
+  let pos;
+  if (lastCaret != null) { const nl = txt.indexOf("\n", lastCaret); pos = nl < 0 ? txt.length : nl + 1; }
+  else { const fim = txt.indexOf("#FIM"); pos = fim >= 0 ? fim : txt.length; }
+  if (pos === txt.length && txt && !txt.endsWith("\n")) bloco = "\n" + bloco;
+  progEl.value = txt.slice(0, pos) + bloco + txt.slice(pos);
+  lastCaret = pos + bloco.length - 1;              // o proximo ponto entra logo abaixo deste
+  const linha = progEl.value.slice(0, pos).split("\n").length;
+  progEl.scrollTop = Math.max(0, (linha - 3) * 18.85);
+  e.currentTarget.blur();                          // o teclado volta a comandar o braco
+  termNote(`Ponto inserido no programa (linha ${linha}).`);
+});
+// Limpar programa: o primeiro clique pede confirmacao, o segundo (em ate 3 s) limpa
+const PROG_NOVO = ["#// Programa novo: insira os pontos entre #INICIO e #FIM", "#INICIO", "#FIM", "#EXECUTAR 1"].join("\n");
+let limparTimer = null;
+document.getElementById("btnLimpar").addEventListener("click", e => {
+  const b = e.currentTarget;
+  b.blur();
+  if (!limparTimer) {
+    b.textContent = "Confirmar: limpar?"; b.classList.add("stopbtn");
+    limparTimer = setTimeout(() => { limparTimer = null; b.textContent = "Limpar programa"; b.classList.remove("stopbtn"); }, 3000);
+    return;
+  }
+  clearTimeout(limparTimer); limparTimer = null;
+  b.textContent = "Limpar programa"; b.classList.remove("stopbtn");
+  if (estado.startsWith("Executando")) sendBytes([" "]);   // interrompe o programa que estiver rodando
+  progEl.value = PROG_NOVO;
+  lastCaret = progEl.value.indexOf("\n#INICIO") + 8;   // o primeiro ponto entra logo abaixo do #INICIO
+  progEl.scrollTop = 0;
+  termNote("Quadro do programa limpo. Grave os pontos entre #INICIO e #FIM.");
+});
+document.getElementById("btnCopiar").addEventListener("click", async e => {
+  const b = e.currentTarget;
+  try { await navigator.clipboard.writeText(progEl.value); b.textContent = "Copiado"; }
+  catch (_) { progEl.focus(); progEl.select(); b.textContent = "Texto selecionado: Ctrl+C"; }
+  setTimeout(() => (b.textContent = "Copiar para o PuTTY"), 1800);
+});
+
+// =====================================================================================
+//  CENA 3D
+// =====================================================================================
+const stageEl = document.getElementById("stage");
+const canvas = document.getElementById("cv");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1.6, 0.01, 20);
+camera.position.set(1.7, 1.3, 1.65);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.target.set(0.42, 0.45, 0.0);
+controls.enableDamping = true;
+controls.enableKeys = false;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 0.35; controls.maxDistance = 3;
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f8c, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.85);
+sun.position.set(0.6, 1.6, 0.9); sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -1, right: 1, top: 1, bottom: -1, near: 0.1, far: 4 });
+scene.add(sun);
+
+const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.55, metalness: 0.15, ...o });
+const mBody = mat(0xe3e4df), mDark = mat(0x1e2326), mAlu = mat(0xb6bcbe, { metalness: 0.6, roughness: 0.35 });
+const mBronze = mat(0x8a5a2b, { metalness: 0.4 }), mBelt = mat(0x121517, { roughness: 0.85 });
+function box(w, h, d, m, y = 0) { const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); g.position.y = y; g.castShadow = true; g.receiveShadow = true; return g; }
+function cylX(r, len, m) { const geo = new THREE.CylinderGeometry(r, r, len, 28); geo.rotateZ(Math.PI / 2); const c = new THREE.Mesh(geo, m); c.castShadow = true; return c; }
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), mat(0xc6cecb, { metalness: 0, roughness: 0.95 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+let grid = null;
+
+// trilho da linha transversal: duas guias e o fuso
+[-0.065, 0.065].forEach(z => { const r = cylX(0.012, 1.0, mAlu); r.position.set(0.47, 0.035, z); scene.add(r); });
+const fuso = cylX(0.009, 1.0, mDark); fuso.position.set(0.47, 0.035, 0); scene.add(fuso);
+[-0.03, 0.97].forEach(x => { const s = box(0.04, 0.07, 0.2, mBody, 0.035); s.position.x = x; scene.add(s); });
+
+// esteira paralela ao trilho
+const CONV = { z: 0.28, w: 0.14, top: 0.07 };
+const belt = box(1.15, 0.012, CONV.w, mBelt, CONV.top - 0.006); belt.position.set(0.47, belt.position.y, CONV.z); scene.add(belt);
+[-1, 1].forEach(sd => { const f = box(1.15, CONV.top, 0.02, mAlu, CONV.top / 2); f.position.set(0.47, f.position.y, CONV.z + sd * (CONV.w / 2 + 0.01)); scene.add(f); });
+
+// carro, caixa fixa e torre giratoria
+const carriage = new THREE.Group(); scene.add(carriage);
+carriage.add(box(0.32, 0.025, 0.3, mBody, 0.06));
+carriage.add(box(0.26, 0.22, 0.25, mBody, 0.1825));
+const base = new THREE.Group(); base.position.y = 0.295; carriage.add(base);
+const torre = (() => {
+  // perfil "casinha" da carcaca giratoria: frente reta (+z), ponta voltada para tras,
+  // deslocada para tras do eixo (no zero ela fica por cima da esteira)
+  const pts = [[0.085, 0], [0.085, 0.22], [0.0, 0.26], [-0.155, 0.26], [-0.27, 0.17], [-0.27, 0.09], [-0.155, 0]];
+  const sh = new THREE.Shape(); pts.forEach(([z, y], i) => (i ? sh.lineTo(-z, y) : sh.moveTo(-z, y)));
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.24, bevelEnabled: false });
+  geo.rotateY(Math.PI / 2); geo.translate(-0.12, 0, 0);
+  const m = new THREE.Mesh(geo, mBody); m.castShadow = true; m.receiveShadow = true; return m;
+})();
+base.add(torre);
+const L1 = CFG.DIM.upper, L2 = CFG.DIM.fore;
+const shoulder = new THREE.Group(); shoulder.position.set(0, CFG.DIM.shoulderY, CFG.DIM.shoulderZ); base.add(shoulder);
+shoulder.add(cylX(0.04, 0.12, mDark));
+shoulder.add(box(0.1, L1 + 0.05, 0.055, mBody, L1 / 2));
+shoulder.add(box(0.07, L1 * 0.75, 0.058, mBelt, L1 / 2));          // correias aparentes
+const bucha = cylX(0.02, 0.112, mBronze); bucha.position.y = L1; shoulder.add(bucha);
+const elbow = new THREE.Group(); elbow.position.y = L1; shoulder.add(elbow);
+const ante = box(0.045, L2 + 0.04, 0.055, mBody, L2 / 2); ante.position.x = 0.07; elbow.add(ante);
+const wrist = new THREE.Group(); wrist.position.y = L2; elbow.add(wrist);
+const polia = cylX(0.03, 0.1, mDark); polia.position.x = 0.03; wrist.add(polia);
+wrist.add(box(0.04, 0.1, 0.034, mDark, -0.065));                    // pega preta sobre o punho
+const roll = new THREE.Group(); roll.position.y = CFG.DIM.wrist; wrist.add(roll);
+roll.add(box(0.04, 0.03, 0.04, mDark, -0.01));
+roll.add(box(0.095, 0.02, 0.05, mAlu, 0.01));
+const fingerL = box(0.016, 0.075, 0.042, mAlu, 0.0575), fingerR = box(0.016, 0.075, 0.042, mAlu, 0.0575);
+roll.add(fingerL, fingerR);
+const grip = new THREE.Object3D(); grip.position.y = 0.07; roll.add(grip);
+const tip = new THREE.Object3D(); tip.position.y = 0.095; roll.add(tip);
+
+// =====================================================================================
+//  MUNDO DO TREINO: pecas, esteira com alimentador, alvos, caixas e palete
+// =====================================================================================
+const CUBE = 0.045;
+const PICK = new THREE.Vector3(0.42, CONV.top + CUBE / 2, CONV.z);   // peca parada no batente da esteira
+const BELT = { xIn: 1.0, xEnd: -0.08, vel: 0.2 };                    // entrada, fim e velocidade (m/s)
+const COR = { laranja: 0xc98a3e, vermelha: 0xc23a2b, azul: 0x2b6cb0, verde: 0x2f8a55 };
+const ZCOR = { amarelo: "#f2c230", vermelha: "#d9534a", azul: "#3f7fd0", verde: "#3c9a62", cinza: "#8f989b" };
+// pontos da mesa conferidos com a cinematica do modelo (todos ao alcance sem mover a linha transversal)
+const LUGAR = {
+  alvo: { x: 0.585, z: -0.137 },
+  caixaA: { x: 0.53, z: -0.17 },
+  caixaB: { x: 0.06, z: -0.30 },
+  palete: { x: 0.08, z: -0.25 },
+  sorteio: [
+    { x: 0.585, z: -0.137 }, { x: 0.50, z: -0.16 }, { x: 0.20, z: -0.30 },
+    { x: 0.05, z: -0.25 }, { x: -0.05, z: -0.15 }, { x: 0.30, z: 0.44 },
+  ],
+};
+
+const batente = box(0.012, 0.035, CONV.w, mAlu, CONV.top + 0.0175);
+batente.position.x = PICK.x - CUBE / 2 - 0.008; batente.position.z = CONV.z; scene.add(batente);
+const mundo = new THREE.Group(); scene.add(mundo);
+let pecas = [], zonas = [], presa = null, prevW = 1, idPeca = 0;
+const esteira = { ligada: false };
+const alim = { ativo: false, seq: ["laranja"], i: 0, restantes: Infinity, espera: 0.5 };
+
+function texturaZona(cor, rotulo) {
+  const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d");
+  g.fillStyle = cor; g.fillRect(0, 0, 128, 128); g.strokeStyle = "rgba(28,36,39,.85)"; g.lineWidth = 12;
+  for (let i = -128; i < 256; i += 32) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 128, 128); g.stroke(); }
+  if (rotulo) {
+    g.fillStyle = "#ffffff"; g.beginPath(); g.arc(64, 64, 38, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "#1c2427"; g.font = "bold 52px Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(rotulo, 64, 67);
+  }
+  return new THREE.CanvasTexture(c);
+}
+function novaZona(o) {
+  const z = { tipo: "alvo", half: 0.055, cor: "amarelo", nome: "alvo", ...o };
+  const grupo = new THREE.Group(); grupo.position.set(z.x, 0, z.z);
+  if (z.tipo === "caixa") {
+    const m = mat(new THREE.Color(ZCOR[z.cor]).getHex(), { roughness: 0.8, metalness: 0 });
+    const H = 0.06, T = 0.008, S = z.half * 2 + T * 2;
+    grupo.add(box(z.half * 2, 0.004, z.half * 2, mat(0x2a3034, { metalness: 0 }), 0.002));
+    [[0, -(z.half + T / 2), S, T], [0, z.half + T / 2, S, T], [-(z.half + T / 2), 0, T, S], [z.half + T / 2, 0, T, S]]
+      .forEach(([x, zz, w, d]) => { const p = box(w, H, d, m, H / 2); p.position.x = x; p.position.z = zz; grupo.add(p); });
+  } else {
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(z.half * 2, 0.004, z.half * 2),
+      new THREE.MeshStandardMaterial({ map: texturaZona(ZCOR[z.cor], z.rotulo), roughness: 0.8 }));
+    plate.position.y = 0.002; plate.receiveShadow = true; grupo.add(plate);
+  }
+  mundo.add(grupo); z.obj = grupo; zonas.push(z); return z;
+}
+function moverZona(z, x, zz) { z.x = x; z.z = zz; z.obj.position.set(x, 0, zz); }
+
+const naFaixaEsteira = v => Math.abs(v.z - CONV.z) < CONV.w / 2 && v.x > -0.105 && v.x < 1.045;
+const zonaEm = v => zonas.find(z => Math.abs(v.x - z.x) < z.half && Math.abs(v.z - z.z) < z.half) || null;
+const naEsteira = p => naFaixaEsteira(p.m.position) && Math.abs(p.m.position.y - PICK.y) < 0.004;
+// altura do centro da peca quando ela estiver apoiada (mesa, alvo, esteira ou outra peca)
+function apoio(p) {
+  const v = p.m.position;
+  let y = (naFaixaEsteira(v) ? CONV.top : zonaEm(v) ? 0.004 : 0) + CUBE / 2;
+  for (const q of pecas) {
+    if (q === p || q.estado !== "repouso") continue;
+    const u = q.m.position;
+    if (Math.abs(u.x - v.x) < CUBE * 0.9 && Math.abs(u.z - v.z) < CUBE * 0.9 && u.y < v.y - CUBE * 0.5) y = Math.max(y, u.y + CUBE);
+  }
+  return y;
+}
+function novaPeca(cor, x, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(CUBE, CUBE, CUBE), mat(COR[cor], { roughness: 0.75, metalness: 0 }));
+  m.castShadow = true; m.position.set(x, 1, z); mundo.add(m);
+  const p = { m, cor, estado: "repouso", vy: 0, id: ++idPeca, porProg: false };
+  m.position.y = apoio(p);
+  pecas.push(p);
+  return p;
+}
+const pecaNoBatente = (cor = "laranja") => novaPeca(cor, PICK.x, PICK.z);
+function limparMundo() {
+  presa = null;
+  pecas.forEach(p => p.m.parent && p.m.parent.remove(p.m));
+  zonas.forEach(z => mundo.remove(z.obj));
+  pecas = []; zonas = [];
+  esteira.ligada = false;
+  Object.assign(alim, { ativo: false, seq: ["laranja"], i: 0, restantes: Infinity, espera: 0.5 });
+}
+function soltarPeca() {
+  const p = presa; presa = null;
+  mundo.attach(p.m);
+  const e = new THREE.Euler().setFromQuaternion(p.m.quaternion, "YXZ");
+  p.m.rotation.set(0, e.y, 0);
+  p.estado = "caindo"; p.vy = 0; p.porProg = executando();
+  evento("soltou", p);
+}
+function pousou(p) {
+  const z = zonaEm(p.m.position);
+  if (z && z.tipo === "caixa") { p.estado = "saindo"; p.t = 0.9; }
+  evento("pousou", p, z);
+}
+function moverEsteira(dt) {
+  const fila = pecas.filter(p => p.estado === "repouso" && naEsteira(p)).sort((a, b) => a.m.position.x - b.m.position.x);
+  let frente = -Infinity;
+  for (const p of fila) {
+    const v = p.m.position;
+    const parada = v.x >= PICK.x - 0.002 ? PICK.x : BELT.xEnd;
+    v.x = Math.min(v.x, Math.max(v.x - BELT.vel * dt, parada, frente + CUBE + 0.004));
+    frente = v.x;
+  }
+}
+function alimentar(dt) {
+  if (!alim.ativo || alim.restantes <= 0) return;
+  const ocupada = pecas.some(p => p.estado !== "presa" && p.estado !== "saindo" && naFaixaEsteira(p.m.position) && p.m.position.x >= PICK.x - 0.01);
+  if (ocupada) { alim.espera = 0.6; return; }
+  alim.espera -= dt;
+  if (alim.espera > 0) return;
+  const cor = alim.seq[alim.i % alim.seq.length];
+  alim.i++; alim.restantes--;
+  novaPeca(cor, BELT.xIn, CONV.z);
+  esteira.ligada = true;
+}
+// pegar e soltar: depende da pose do braco, entao roda a cada quadro desenhado
+function atualizarGarra(w) {
+  grip.getWorldPosition(gp);
+  if (!presa) {
+    if (w <= CUBE + 0.002 && prevW > CUBE + 0.002) {
+      let melhor = null, dm = 0.03;
+      for (const p of pecas) {
+        if (p.estado !== "repouso") continue;
+        const d = gp.distanceTo(p.m.position);
+        if (d < dm) { dm = d; melhor = p; }
+      }
+      if (melhor) { presa = melhor; melhor.estado = "presa"; roll.attach(melhor.m); evento("pegou", melhor); }
+    }
+  } else if (w > CUBE + 0.004) soltarPeca();
+  prevW = w;
+}
+// esteira, quedas e alimentador: rodam no relogio do simulador (mesmo do firmware)
+function mundoPasso(dt) {
+  if (esteira.ligada) moverEsteira(dt);
+  for (const p of pecas) {
+    if (p.estado === "repouso" && p.m.position.y > apoio(p) + 0.002) { p.estado = "caindo"; p.vy = 0; }
+    if (p.estado === "caindo") {
+      const a = apoio(p);   // apoio calculado ANTES de descer: um passo grande nao atravessa a peca de baixo
+      p.vy += 9.8 * dt; p.m.position.y -= p.vy * dt;
+      if (p.m.position.y <= a) { p.m.position.y = a; p.estado = "repouso"; pousou(p); }
+    } else if (p.estado === "saindo") {
+      p.t -= dt;
+      if (p.t <= 0) { p.remover = true; mundo.remove(p.m); }
+    }
+  }
+  if (pecas.some(p => p.remover)) pecas = pecas.filter(p => !p.remover);
+  alimentar(dt);
+}
+
+// =====================================================================================
+//  EXERCICIOS
+// =====================================================================================
+const executando = () => estado.startsWith("Executando");
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const CHAVE_SALVO = "treino5250-v1";
+let salvo = { feitos: {}, atual: "e1" };
+try { salvo = { ...salvo, ...JSON.parse(localStorage.getItem(CHAVE_SALVO) || "{}") }; } catch (_) {}
+const gravarSalvo = () => { try { localStorage.setItem(CHAVE_SALVO, JSON.stringify(salvo)); } catch (_) {} };
+
+let ex = null, S = null, exGen = 0;
+const depois = (ms, f) => { const g = exGen; setTimeout(() => { if (g === exGen) f(); }, ms); };
+const alvoPadrao = () => novaZona({ ...LUGAR.alvo, cor: "amarelo", nome: "alvo amarelo" });
+// pecas apoiadas dentro de uma zona, de baixo para cima
+const pecasNaZona = z => pecas.filter(p => p.estado === "repouso" && zonaEm(p.m.position) === z).sort((a, b) => a.m.position.y - b.m.position.y);
+const nivel = p => Math.round((p.m.position.y - (0.004 + CUBE / 2)) / CUBE);
+const caiuNoChao = (p, z) => !z && !naEsteira(p) && p.m.position.y < CUBE;
+
+const PONTO = n => `#// ponto ${n}`;
+const EXERCICIOS = [
+  {
+    id: "e1", titulo: "Conheça os eixos", nivel: "Básico · teclado",
+    resumo: "Mova cada eixo para longe do zero e depois mande o braço zerar. Observe na tabela como o encoder conta enquanto o eixo anda.",
+    dica: `<ul><li>Segure a tecla: o eixo anda enquanto ela estiver pressionada.</li><li>Fileira de cima (Q W E R T) recua, fileira de baixo (A S D F G) avança. Y fecha e H abre a garra.</li><li>Na garra não existe chave fim de curso: o zero dela é "garra aberta".</li><li>Para zerar, aperte Z duas vezes seguidas.</li></ul>`,
+    montar() { pecaNoBatente(); alvoPadrao(); S.f.max = {}; },
+    tick() { if (!/^Parado|^Movendo/.test(estado)) return; ["B", "O", "C", "MP", "GP", "G"].forEach(a => { S.f.max[a] = Math.max(S.f.max[a] || 0, Math.abs(lerPos(a))); }); },
+    linha(l) { if (/ZERAMENTO concluido/.test(l) && this.metas.slice(0, 6).every(m => m.ok())) S.f.zerou = true; },
+    metas: [
+      ["B", "Base (Q / A)"], ["O", "Ombro (W / S)"], ["C", "Cotovelo (E / D)"],
+      ["MP", "Movimento do punho (R / F)"], ["GP", "Giro do punho (T / G)"], ["G", "Garra (Y / H)"],
+    ].map(([a, t]) => ({ txt: `${t}: mais de 2000 contagens`, pg: () => (S.f.max[a] || 0).toLocaleString("pt-BR"), ok: () => (S.f.max[a] || 0) > 2000 }))
+      .concat([{ txt: "Zere o braço com Z Z", ok: () => !!S.f.zerou }]),
+  },
+  {
+    id: "e2", titulo: "Pegar e colocar", nivel: "Básico · teclado",
+    resumo: "Pegue a peça laranja parada na esteira e coloque-a dentro do alvo amarelo, sem bater o braço na mesa.",
+    dica: `<ul><li>Abra a garra (H) antes de descer até a peça.</li><li>Para a garra ficar na vertical, combine ombro, cotovelo e punho: abaixe com o cotovelo e corrija o ângulo com o punho.</li><li>Feche com Y: a peça é presa quando a garra encosta nela.</li><li>Solte acima do alvo com H. A peça cai na vertical.</li><li>Errou? Clique em <b>Reiniciar exercício</b>.</li></ul>`,
+    montar() { pecaNoBatente(); S.alvo = alvoPadrao(); },
+    on(t, p, z) {
+      if (t === "pegou") S.f.pegou = true;
+      if (t === "pousou" && z === S.alvo) S.f.ok = true;
+    },
+    metas: [
+      { txt: "Pegue a peça na esteira", ok: () => !!S.f.pegou },
+      { txt: "Coloque a peça no alvo amarelo", ok: () => !!S.f.ok },
+    ],
+  },
+  {
+    id: "e3", titulo: "Ponto sorteado", nivel: "Básico · teclado",
+    resumo: "O alvo muda de lugar a cada entrega. Leve a peça a 3 pontos sorteados. Use a vista 3D (arraste para girar) para conferir a posição antes de soltar.",
+    dica: `<ul><li>Gire a vista 3D para olhar de cima: fica mais fácil alinhar a garra com o alvo.</li><li>Um dos pontos fica do outro lado da esteira: passe por cima dela com a peça bem alta.</li><li>Cada entrega traz uma peça nova para o batente da esteira.</li></ul>`,
+    montar() {
+      pecaNoBatente(); S.f.n = 0; S.f.i = Math.floor(Math.random() * LUGAR.sorteio.length);
+      const l = LUGAR.sorteio[S.f.i]; S.alvo = novaZona({ ...l, cor: "amarelo", rotulo: "1" });
+    },
+    on(t, p, z) {
+      if (t !== "pousou" || naEsteira(p)) return;
+      if (z === S.alvo) {
+        S.f.n++;
+        if (S.f.n >= 3) return;
+        depois(900, () => {
+          pecas.filter(q => q !== presa).forEach(q => { mundo.remove(q.m); q.remover = true; });
+          pecas = pecas.filter(q => !q.remover);
+          let i; do { i = Math.floor(Math.random() * LUGAR.sorteio.length); } while (i === S.f.i);
+          S.f.i = i; mundo.remove(S.alvo.obj); zonas = zonas.filter(q => q !== S.alvo);
+          S.alvo = novaZona({ ...LUGAR.sorteio[i], cor: "amarelo", rotulo: String(S.f.n + 1) });
+          pecaNoBatente();
+        });
+      } else if (caiuNoChao(p, z)) depois(900, () => { mundo.remove(p.m); pecas = pecas.filter(q => q !== p); pecaNoBatente(); });
+    },
+    metas: [{ txt: "Entregue a peça em 3 pontos sorteados", pg: () => `${Math.min(S.f.n, 3)}/3`, ok: () => S.f.n >= 3 }],
+  },
+  {
+    id: "e4", titulo: "Primeiro programa", nivel: "Intermediário · programação",
+    resumo: "Faça o braço pegar a peça e colocá-la no alvo sozinho. Grave os pontos com o teclado, monte o programa e execute.",
+    dica: `<ul><li>Clique em <b>Carregar modelo de programa</b>. Leve o braço a cada ponto, clique na linha do comentário do ponto e depois em <b>Inserir ponto atual</b>.</li><li>Cada linha move um eixo por vez, na ordem escrita. Se o braço passar raspando na esteira, crie um ponto intermediário mais alto.</li><li><b>Enviar ao braço</b> grava e executa. Antes de rodar, aperte <b>Reiniciar exercício</b> para a peça voltar ao lugar.</li></ul>`,
+    modelo: [
+      "#// Primeiro programa: pegar a peça da esteira e colocar no alvo",
+      "#// Clique na linha de cada ponto e use Inserir ponto atual",
+      "#INICIO", "#VEL 100", "#G 0",
+      PONTO("1: acima da peça (garra aberta)"), PONTO("2: garra em volta da peça"),
+      "#G 15000", "#ESPERA 300",
+      PONTO("3: subir com a peça (pode repetir o ponto 1)"), PONTO("4: acima do alvo amarelo"),
+      "#G 0", "#ESPERA 300",
+      PONTO("5: posição de descanso"),
+      "#FIM", "#EXECUTAR 1",
+    ],
+    montar() { pecaNoBatente(); S.alvo = alvoPadrao(); },
+    linha(l) { if (/Programa gravado com [1-9]/.test(l)) S.f.gravou = true; },
+    tick() { if (executando()) S.f.rodou = true; },
+    on(t, p, z) { if (t === "pousou" && z === S.alvo && p.porProg) S.f.ok = true; },
+    metas: [
+      { txt: "Grave um programa (#INICIO … #FIM)", ok: () => !!S.f.gravou },
+      { txt: "Execute o programa (tecla 1 ou #EXECUTAR)", ok: () => !!S.f.rodou },
+      { txt: "O programa coloca a peça no alvo", ok: () => !!S.f.ok },
+    ],
+  },
+  {
+    id: "e5", titulo: "Linha contínua", nivel: "Intermediário · programação",
+    resumo: "A esteira traz uma peça nova sempre que a anterior sai do batente. Programe um ciclo que se repete: pegar na esteira e largar na caixa. Entregue 5 peças seguidas sem parar o programa.",
+    dica: `<ul><li>Use <code>#EXECUTAR 0</code> para repetir sem fim (ESPAÇO interrompe) ou <code>#EXECUTAR 5</code>.</li><li>O ciclo precisa terminar no mesmo ponto em que começa.</li><li>A peça seguinte leva uns 3 s para chegar ao batente. Se o braço voltar antes, use <code>#ESPERA</code> para dar tempo.</li><li>Solte a peça acima das paredes da caixa.</li></ul>`,
+    modelo: [
+      "#// Linha contínua: um ciclo que se repete",
+      "#INICIO", "#VEL 120", "#G 0",
+      PONTO("1: acima da peça no batente"), PONTO("2: garra em volta da peça"),
+      "#G 15000", "#ESPERA 300",
+      PONTO("3: subir com a peça"), PONTO("4: acima da caixa"),
+      "#G 0", "#ESPERA 300",
+      "#// volte ao ponto 1 (cole o ponto 1 de novo aqui)",
+      "#FIM", "#EXECUTAR 0",
+    ],
+    montar() {
+      S.caixa = novaZona({ ...LUGAR.caixaA, tipo: "caixa", cor: "cinza", half: 0.06, nome: "caixa" });
+      Object.assign(alim, { ativo: true, seq: ["laranja"], restantes: Infinity, espera: 0.3 });
+      S.f.seq = 0; S.f.cai = 0;
+    },
+    inicioPrograma() { S.f.seq = 0; },
+    on(t, p, z) {
+      if (t !== "pousou") return;
+      if (z === S.caixa && p.porProg && executando()) S.f.seq++;
+      else if (caiuNoChao(p, z)) S.f.cai++;
+    },
+    metas: [
+      { txt: "5 peças na caixa com o programa rodando", pg: () => `${Math.min(S.f.seq, 5)}/5`, ok: () => S.f.seq >= 5 },
+      { txt: "Nenhuma peça derrubada fora da caixa", pg: () => (S.f.cai ? `${S.f.cai} caída(s)` : ""), ok: () => S.f.cai === 0 && S.f.seq >= 5 },
+    ],
+  },
+  {
+    id: "e6", titulo: "Separação por cor", nivel: "Avançado · programação",
+    resumo: "As peças chegam sempre na mesma ordem: vermelha, azul, vermelha, azul… Coloque cada uma na caixa da sua cor. O braço não enxerga cor: o programa precisa seguir a sequência.",
+    dica: `<ul><li>Um ciclo do programa trata duas peças: a primeira vai para a caixa vermelha e a segunda para a azul.</li><li>Se o programa for interrompido no meio, a ordem se perde. Aperte <b>Reiniciar exercício</b> para recomeçar a sequência.</li><li>Isso mostra por que linhas reais usam sensores de cor ou de presença.</li></ul>`,
+    modelo: [
+      "#// Separação por cor: vermelha, azul, vermelha, azul...",
+      "#INICIO", "#VEL 120", "#G 0",
+      PONTO("1: acima da peça no batente"), PONTO("2: garra em volta da peça"),
+      "#G 15000", "#ESPERA 300", PONTO("3: subir com a peça"),
+      PONTO("4: acima da caixa VERMELHA"), "#G 0", "#ESPERA 300",
+      "#// segunda peça (azul): repita os pontos 1, 2 e 3",
+      "#G 15000", "#ESPERA 300",
+      PONTO("5: acima da caixa AZUL"), "#G 0", "#ESPERA 300",
+      "#FIM", "#EXECUTAR 3",
+    ],
+    montar() {
+      S.cv = novaZona({ ...LUGAR.caixaA, tipo: "caixa", cor: "vermelha", half: 0.06 });
+      S.ca = novaZona({ ...LUGAR.caixaB, tipo: "caixa", cor: "azul", half: 0.06 });
+      Object.assign(alim, { ativo: true, seq: ["vermelha", "azul"], restantes: Infinity, espera: 0.3 });
+      S.f.certas = 0; S.f.erradas = 0;
+    },
+    on(t, p, z) {
+      if (t !== "pousou" || !z || z.tipo !== "caixa") return;
+      if (z.cor === p.cor) S.f.certas++; else S.f.erradas++;
+    },
+    metas: [
+      { txt: "6 peças na caixa da cor certa", pg: () => `${Math.min(S.f.certas, 6)}/6`, ok: () => S.f.certas >= 6 },
+      { txt: "Nenhuma peça na caixa errada", pg: () => (S.f.erradas ? `${S.f.erradas} errada(s)` : ""), ok: () => S.f.erradas === 0 && S.f.certas >= 6 },
+    ],
+  },
+  {
+    id: "e7", titulo: "Empilhamento", nivel: "Intermediário · teclado ou programa",
+    resumo: "Monte uma torre de 3 peças no alvo amarelo: verde embaixo, azul no meio e vermelha em cima.",
+    dica: `<ul><li>Cada peça tem 45 mm de altura: para soltar a segunda e a terceira, pare mais alto.</li><li>Solte bem centralizado. Se a peça cair fora da que está embaixo, ela vai para a mesa.</li><li>Pegue cada peça com a garra na vertical, um pouco acima do meio: se as pontas dos dedos tocarem a mesa, conta como colisão.</li></ul>`,
+    montar() {
+      novaPeca("verde", -0.03, -0.22); novaPeca("azul", 0.06, -0.28); novaPeca("vermelha", 0.17, -0.30);
+      S.alvo = alvoPadrao();
+    },
+    metas: [
+      { txt: "Torre de 3 peças no alvo", pg: () => `${Math.min(3, pecasNaZona(S.alvo).filter((p, i) => nivel(p) === i).length)}/3`,
+        ok: () => pecasNaZona(S.alvo).filter((p, i) => nivel(p) === i).length >= 3 },
+      { txt: "Ordem das cores: verde, azul, vermelha", ok: () => {
+        const t = pecasNaZona(S.alvo); return t.length >= 3 && t.slice(0, 3).map(p => p.cor).join() === "verde,azul,vermelha" && t.slice(0, 3).every((p, i) => nivel(p) === i);
+      } },
+    ],
+  },
+  {
+    id: "e8", titulo: "Paletização 2 × 2", nivel: "Avançado · programação",
+    resumo: "Chegam 4 peças pela esteira. O programa deve colocar uma peça em cada posição do palete, de 1 a 4, sem empilhar.",
+    dica: `<ul><li>O ciclo de pegar é o mesmo para as 4 peças. O que muda é o ponto de soltar: grave um ponto para cada posição do palete.</li><li>As posições ficam a 6 cm uma da outra e aceitam erro de até 2 cm.</li><li>Use <code>#EXECUTAR 1</code>: o programa inteiro trata as 4 peças.</li></ul>`,
+    modelo: [
+      "#// Paletização 2 x 2: uma peça em cada posição",
+      "#INICIO", "#VEL 120", "#G 0",
+      "#// --- peça 1 ---", PONTO("A: acima da peça"), PONTO("B: garra em volta da peça"), "#G 15000", "#ESPERA 300", PONTO("C: subir"),
+      PONTO("P1: acima da posição 1"), "#G 0", "#ESPERA 300",
+      "#// --- peça 2: repita A, B, C e solte na posição 2 ---",
+      "#// --- peça 3: repita A, B, C e solte na posição 3 ---",
+      "#// --- peça 4: repita A, B, C e solte na posição 4 ---",
+      "#FIM", "#EXECUTAR 1",
+    ],
+    montar() {
+      const c = LUGAR.palete, d = 0.03;
+      S.slots = [[-d, -d], [d, -d], [-d, d], [d, d]].map(([dx, dz], i) =>
+        novaZona({ x: c.x + dx, z: c.z + dz, half: 0.025, cor: "verde", rotulo: String(i + 1), nome: "posição " + (i + 1) }));
+      Object.assign(alim, { ativo: true, seq: ["laranja"], restantes: 4, espera: 0.3 });
+    },
+    metas: [
+      { txt: "Uma peça em cada posição do palete", pg: () => `${S.slots.filter(z => pecasNaZona(z).length === 1).length}/4`,
+        ok: () => S.slots.every(z => pecasNaZona(z).length === 1) },
+      { txt: "Todas colocadas pelo programa", ok: () => S.slots.every(z => pecasNaZona(z).length === 1 && pecasNaZona(z)[0].porProg) },
+    ],
+  },
+  {
+    id: "e9", titulo: "Precisão", nivel: "Intermediário · teclado ou programa",
+    resumo: "O alvo agora tem só 24 mm: o centro da peça precisa cair dentro dele. Acerte 3 vezes seguidas. Errou, a contagem volta a zero.",
+    dica: `<ul><li>Abaixe a velocidade (tecla −) para os ajustes finos.</li><li>Olhe de cima (gire a vista) e de lado antes de soltar.</li><li>Num programa, grave o ponto de soltar só depois de conferir a posição.</li></ul>`,
+    montar() { pecaNoBatente(); S.alvo = novaZona({ ...LUGAR.alvo, half: 0.012, cor: "vermelha" }); S.f.seq = 0; },
+    on(t, p, z) {
+      if (t !== "pousou" || naEsteira(p)) return;
+      if (z === S.alvo) S.f.seq++; else S.f.seq = 0;
+      if (S.f.seq >= 3) return;
+      depois(900, () => { mundo.remove(p.m); pecas = pecas.filter(q => q !== p); pecaNoBatente(); });
+    },
+    metas: [{ txt: "3 acertos seguidos no alvo pequeno", pg: () => `${Math.min(S.f.seq, 3)}/3`, ok: () => S.f.seq >= 3 }],
+  },
+  {
+    id: "e10", titulo: "Produção cronometrada", nivel: "Avançado · otimização",
+    resumo: "Linha contínua contra o relógio: quantas peças o seu programa coloca na caixa em 3 minutos? A meta é 8. Para ganhar tempo, ajuste a velocidade e corte pontos desnecessários.",
+    dica: `<ul><li>O relógio começa quando o programa começa.</li><li><code>#VEL 150</code> é a velocidade máxima. Ela deixa o ciclo mais rápido, mas no braço real aumenta a inércia e o erro de posição.</li><li>Movimentos de eixos diferentes não acontecem ao mesmo tempo: cada linha a menos é tempo ganho.</li></ul>`,
+    modelo: null,
+    montar() {
+      S.caixa = novaZona({ ...LUGAR.caixaA, tipo: "caixa", cor: "cinza", half: 0.06 });
+      Object.assign(alim, { ativo: true, seq: ["laranja"], restantes: Infinity, espera: 0.3 });
+      S.f.n = 0; S.f.t0 = null;
+    },
+    inicioPrograma() { if (S.f.t0 == null) S.f.t0 = simMs; },
+    restante() { return S.f.t0 == null ? 180 : Math.max(0, 180 - (simMs - S.f.t0) / 1000); },
+    on(t, p, z) { if (t === "pousou" && z === S.caixa && p.porProg && S.f.t0 != null && this.restante() > 0) S.f.n++; },
+    metas: [
+      { txt: "Comece o programa", ok: () => S.f.t0 != null },
+      { txt: "8 peças na caixa em 3 minutos", pg: function () { return `${S.f.n}/8 · ${fmt(EXERCICIOS[9].restante())}`; }, ok: () => S.f.n >= 8 },
+    ],
+  },
+  {
+    id: "livre", titulo: "Modo livre", nivel: "Livre",
+    resumo: "Sem metas: esteira com alimentador, alvo amarelo e caixa azul para praticar à vontade ou criar seus próprios desafios.",
+    dica: `<ul><li>Pegue uma peça da esteira e outra já chega.</li><li>Teste programas longos com <code>#EXECUTAR 0</code> e interrompa com ESPAÇO.</li></ul>`,
+    montar() {
+      alvoPadrao(); novaZona({ ...LUGAR.caixaB, tipo: "caixa", cor: "azul", half: 0.06 });
+      Object.assign(alim, { ativo: true, seq: ["laranja", "verde", "azul", "vermelha"], restantes: Infinity, espera: 0.3 });
+    },
+    metas: [],
+  },
+];
+EXERCICIOS[3].modelo = EXERCICIOS[3].modelo.join("\n");
+[4, 5, 7].forEach(i => (EXERCICIOS[i].modelo = EXERCICIOS[i].modelo.join("\n")));
+EXERCICIOS[9].modelo = EXERCICIOS[4].modelo.replace("Linha contínua: um ciclo que se repete", "Produção cronometrada: otimize este ciclo").replace("#VEL 120", "#VEL 150");
+
+// ---- painel ----
+const exSel = document.getElementById("exSel");
+const exNivel = document.getElementById("exNivel"), exResumo = document.getElementById("exResumo");
+const exMetas = document.getElementById("exMetas"), exDica = document.getElementById("exDica");
+const exTempo = document.getElementById("exTempo"), exCol = document.getElementById("exCol"), exMelhor = document.getElementById("exMelhor");
+const exOk = document.getElementById("exOk"), btnModelo = document.getElementById("exModelo");
+const hudNum = document.getElementById("hudNum"), hudTxt = document.getElementById("hudTxt");
+const chipEsteira = document.getElementById("chipEsteira");
+
+function preencherLista() {
+  const v = exSel.value;
+  exSel.innerHTML = EXERCICIOS.map((e, i) =>
+    `<option value="${e.id}">${salvo.feitos[e.id] ? "✓ " : ""}${e.id === "livre" ? "" : (i + 1) + ". "}${e.titulo}</option>`).join("");
+  exSel.value = v || (ex && ex.id) || salvo.atual;
+}
+function iniciarExercicio(id) {
+  const e = EXERCICIOS.find(q => q.id === id) || EXERCICIOS[0];
+  exGen++;
+  if (executando() || movAtual !== MV.NENHUM) sendBytes([" "]);   // interrompe o que estiver rodando
+  limparMundo();
+  ex = e; S = { t0: simMs, fim: null, col: 0, f: {}, prevExec: false };
+  ex.montar();
+  salvo.atual = ex.id; gravarSalvo();
+  exSel.value = ex.id;
+  exNivel.textContent = ex.nivel;
+  exResumo.textContent = ex.resumo;
+  exDica.innerHTML = ex.dica || "";
+  btnModelo.hidden = !ex.modelo;
+  exOk.hidden = true;
+  exMetas.innerHTML = ex.metas.map(() => `<li><span class="ck" aria-hidden="true"></span><span class="txt"></span><span class="pg"></span></li>`).join("");
+  ex.metas.forEach((m, i) => (exMetas.children[i].querySelector(".txt").textContent = m.txt));
+  const b = salvo.feitos[ex.id];
+  exMelhor.textContent = b ? fmt(b.tempo) + (b.col ? ` · ${b.col} col.` : "") : "—";
+  hudNum.textContent = ex.id === "livre" ? "Livre" : `Exercício ${EXERCICIOS.indexOf(ex) + 1}`;
+  atualizarPainel();
+}
+function evento(tipo, p, z) { if (ex && ex.on) ex.on(tipo, p, z); }
+function linhaSerial(l) { if (ex && ex.linha) ex.linha(l); }
+let colAnterior = false;
+function tickExercicio(colidindo) {
+  if (!ex) return;
+  const exec = executando();
+  if (exec && !S.prevExec && ex.inicioPrograma) ex.inicioPrograma();
+  S.prevExec = exec;
+  if (colidindo && !colAnterior && !S.fim) S.col++;
+  colAnterior = colidindo;
+  if (ex.tick) ex.tick();
+  if (!S.fim && ex.metas.length && ex.metas.every(m => m.ok())) {
+    S.fim = simMs;
+    const tempo = (S.fim - S.t0) / 1000;
+    const ant = salvo.feitos[ex.id];
+    if (!ant || tempo < ant.tempo) salvo.feitos[ex.id] = { tempo, col: S.col };
+    gravarSalvo(); preencherLista();
+    const est = S.col === 0 ? "★★★" : S.col <= 2 ? "★★☆" : "★☆☆";
+    exOk.innerHTML = `<b>Concluído</b> em ${fmt(tempo)} com ${S.col} colisão(ões) <span class="stars" aria-label="${est.split("★").length - 1} de 3 estrelas">${est}</span>`;
+    exOk.hidden = false;
+  }
+}
+function atualizarPainel() {
+  if (!ex) return;
+  let proxima = null;
+  ex.metas.forEach((m, i) => {
+    const li = exMetas.children[i]; const ok = m.ok();
+    li.classList.toggle("ok", ok);
+    li.querySelector(".pg").textContent = m.pg ? m.pg() : "";
+    if (!ok && !proxima) proxima = m.txt;
+  });
+  exTempo.textContent = fmt(((S.fim ?? simMs) - S.t0) / 1000);
+  exCol.textContent = S.col;
+  hudTxt.textContent = ex.metas.length === 0 ? "Pratique à vontade." : S.fim ? "Concluído! Escolha o próximo exercício." : proxima;
+  chipEsteira.hidden = !esteira.ligada;
+}
+exSel.addEventListener("change", () => { iniciarExercicio(exSel.value); exSel.blur(); });
+document.getElementById("btnCubo").addEventListener("click", e => { iniciarExercicio(ex.id); e.currentTarget.blur(); });
+btnModelo.addEventListener("click", () => {
+  progEl.value = ex.modelo; lastCaret = null;
+  progEl.scrollTop = 0;
+  termNote("Modelo carregado no quadro Programa. Clique na linha de cada ponto e use Inserir ponto atual.");
+});
+preencherLista();
+
+function applyTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  const v = n => cs.getPropertyValue(n).trim() || "#888888";
+  scene.background = new THREE.Color(v("--stage"));
+  floor.material.color.set(v("--floor"));
+  if (grid) scene.remove(grid);
+  grid = new THREE.GridHelper(4, 40, new THREE.Color(v("--grid")), new THREE.Color(v("--grid")));
+  grid.position.y = 0.0005; grid.material.transparent = true; grid.material.opacity = 0.55;
+  scene.add(grid);
+}
+applyTheme();
+try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme); } catch (_) {}
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+function resize() {
+  const r = stageEl.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stageEl); resize();
+
+const rad = d => d * Math.PI / 180;
+const qBase = () => CFG.B.qMin + (phys.B - CFG.B.pMin) * (CFG.B.qMax - CFG.B.qMin) / (CFG.B.pMax - CFG.B.pMin);
+const larguraGarra = () => CFG.G.maxOpen * (1 - clamp(phys.G / CFG.G.pClosed, 0, 1));
+const xLinha = () => CFG.LT.xStart + clamp(phys.LT, 0, CFG.LT.pLen) / CFG.LT.pLen * CFG.LT.xLen;
+
+const warnEl = document.getElementById("warn");
+const chipFonte = document.getElementById("chipFonte"), chipModo = document.getElementById("chipModo");
+const chipVel = document.getElementById("chipVel"), chipEstado = document.getElementById("chipEstado");
+const gp = new THREE.Vector3(), tp = new THREE.Vector3(), wp = new THREE.Vector3();
+let lastUi = 0, lastFrame = performance.now();
+
+function render(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
+  const q = toQ(phys);
+  carriage.position.x = xLinha();
+  base.rotation.y = rad(qBase());
+  shoulder.rotation.x = rad(q.O);
+  elbow.rotation.x = rad(q.C);
+  wrist.rotation.x = rad(q.MP);
+  roll.rotation.y = rad(q.GP);
+  const w = larguraGarra();
+  const wv = presa ? Math.max(w, CUBE) : w;
+  fingerL.position.x = -(wv / 2 + 0.008); fingerR.position.x = wv / 2 + 0.008;
+  scene.updateMatrixWorld();
+  atualizarGarra(w);
+  tip.getWorldPosition(tp); wrist.getWorldPosition(wp);
+  const colidindo = tp.y < 0.002 || wp.y < 0.02;
+  warnEl.hidden = !colidindo;
+  tickExercicio(colidindo);
+
+  if (now - lastUi > 100) {
+    lastUi = now;
+    const pos = {
+      B: qBase().toFixed(1) + "°", O: q.O.toFixed(1) + "°", C: q.C.toFixed(1) + "°", MP: q.MP.toFixed(1) + "°",
+      GP: q.GP.toFixed(1) + "°", G: (w * 1000).toFixed(0) + " mm", LT: ((xLinha() - CFG.LT.xStart) * 1000).toFixed(0) + " mm",
+    };
+    UI_AXES.forEach(u => {
+      const r = rowRefs[u.ax];
+      r.enc.textContent = lerPos(u.ax).toLocaleString("pt-BR");
+      r.pos.textContent = pos[u.ax];
+      if (u.ax !== "G") r.sw.firstChild.classList.toggle("hit", !!sw(u.ax));
+    });
+    if (realMode) {
+      chipFonte.textContent = "Braço real"; chipFonte.classList.add("real");
+      chipModo.textContent = "Modo —"; chipVel.textContent = "Vel —"; chipEstado.textContent = "Espelhando posições (tecla V)";
+    } else {
+      chipFonte.textContent = "Simulador"; chipFonte.classList.remove("real");
+      chipModo.textContent = modo === SEGURAR ? "Modo segurar" : "Modo contínuo";
+      chipVel.textContent = "Vel " + velocidadePct + "%";
+      chipEstado.textContent = estado;
+    }
+    atualizarPainel();
+  }
+  termFlush();
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(render);
+}
+
+// =====================================================================================
+//  LIGAR / REINICIAR
+// =====================================================================================
+function powerCycle() {
+  fwGen++;
+  pararTudo();
+  rxQueue.length = 0;
+  AXES.forEach(a => (off[a] = phys[a]));   // encoders comecam em zero onde o braco estiver
+  resetVars();
+  firmwareMain();
+}
+document.getElementById("btnReset").addEventListener("click", () => {
+  if (realMode) return;
+  termNote("Arduino reiniciado. Encoders em zero na posicao atual.");
+  powerCycle();
+});
+
+// Esta pagina so simula: sem ponte serial e sem Web Serial
+let realLink = null;
+function pedirPosicoes() {}
+
+// partida
+poseInicial();
+powerCycle();
+scheduler();
+iniciarExercicio(salvo.atual);
+requestAnimationFrame(render);
+</script>

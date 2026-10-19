@@ -1,0 +1,58 @@
+PONTE SERIAL DO BRACO LAB-VOLT 5250 PARA O APP DO CLAUDE
+=========================================================
+
+A ponte deixa a Bancada Virtual 5250 comandar o braco real quando a pagina
+e aberta no app do Claude para desktop. Ela faz o papel do PuTTY: leva as
+teclas ate o Arduino e traz de volta o texto que ele escreve.
+
+O QUE VOCE PRECISA
+  - PC da bancada com Windows, ligado ao Arduino pelo cabo USB
+  - App do Claude para desktop instalado e com a sua conta
+  - Python 3.10 ou mais novo (python.org). Na instalacao, marque
+    "Add python.exe to PATH".
+
+INSTALACAO (uma vez)
+  1. Crie a pasta C:\BracoSerial e copie para ela os dois arquivos:
+       braco_serial_mcp.py
+       instalar_ponte.py
+  2. Abra o Prompt de Comando nessa pasta e rode:
+       python instalar_ponte.py
+  3. Feche o app do Claude por completo (clique com o botao direito no
+     icone perto do relogio e escolha Sair) e abra de novo.
+  4. Em Configuracoes > Desenvolvedor do app, a ponte "braco_serial"
+     deve aparecer como ativa.
+
+Se preferir configurar a mao, o instalador so acrescenta isto ao arquivo
+%APPDATA%\Claude\claude_desktop_config.json (ajuste os caminhos):
+
+  {
+    "mcpServers": {
+      "braco_serial": {
+        "command": "C:\\caminho\\para\\python.exe",
+        "args": ["C:\\BracoSerial\\braco_serial_mcp.py"]
+      }
+    }
+  }
+
+USO EM SALA
+  1. Feche o PuTTY (so um programa pode usar a porta COM por vez).
+  2. No app do Claude, abra a Bancada Virtual 5250.
+  3. Clique em "Conectar braco real", escolha a porta COM do Arduino e
+     clique em Conectar. O Arduino reinicia e faz o zeramento.
+  4. O app pode pedir permissao para a pagina usar a ponte. Escolha
+     permitir (de preferencia "sempre", para nao perguntar a cada tecla).
+  5. Para voltar ao simulador, clique em "Desconectar braco real".
+
+SEGURANCA
+  - ESPACO continua parando tudo, como no PuTTY.
+  - Ao segurar uma tecla de movimento, a ponte repete a tecla por no maximo
+    2 segundos a cada pedido da pagina. Se a pagina travar, fechar ou perder
+    a conexao, a repeticao para sozinha e o Arduino para o eixo.
+  - Apenas o dono da pagina consegue usar a ponte. Alunos com o link nao
+    controlam o braco pelo proprio computador.
+
+PROBLEMAS COMUNS
+  - "Ponte serial nao encontrada": a pagina nao esta aberta no app para
+    desktop, ou o app nao foi reiniciado depois da instalacao.
+  - "Nao consegui abrir COMx": o PuTTY ou a Arduino IDE estao usando a porta.
+  - Nenhuma porta na lista: confira o cabo USB e o driver do Arduino.
